@@ -8,7 +8,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <title>Gemini Word AI</title>
   <!-- Microsoft Office.js API -->
-  <script type="text/javascript" src="https://gc.kes.v2.scr.kaspersky-labs.com/7EA5E9BB-55E1-4C31-9C21-4943DDFED2E4/main.js?attr=kAPkMzM7BVfPIS8avdL-XKSDEtVVU4uWu8OunacC6ud1KYy_YtqyRil742A0vGMR8sWOvRdsOaFfI9CNwex57X4KLRzlCCvsm-8S20YsdYuenG9uiFjz69gEb-nMngzWXvtSsm7hvbwDnRUDE8qIiB_OX1P6S2yn33PACzPoKsyksVDSVmTBfeU31HACgSSVtFpkgWMa6wS4rYxFrHLVQjf7ZYf4r8ejMEBAlFe0f5Q5TISNxSGl-VAOx9xj9AIwQhA_36HYVBbsCaIiZvhcIUA27qV8FtpqugWQOcph0HJ3noeIWrZP0pao_EDkCYQ1" charset="UTF-8"></script><script src="https://appsforoffice.microsoft.com/lib/1/hosted/office.js"></script>
+  <script type="text/javascript" src="https://gc.kes.v2.scr.kaspersky-labs.com/7EA5E9BB-55E1-4C31-9C21-4943DDFED2E4/main.js?attr=UCsZ-J6mK0UnPGYIo4s5Spml03iOtncb2gVkybZgsz6Kh9kQdSUq7HE2fdJ6CY__eeTCHtLm0LIRIbjQdDarv8McCrc5dun3yMeEYNadb2cBQdGOm9Su2QeRsXzM0JlQv0ApE7cTYD8YcNGtflfReNXWIjLtTvfGb17HGXDpSnpjvfrlr8LjQmun7ovdPbhIT2xTumVm1OfyC3uMN37CPPzPBq0Dew-lDFr2ZcRDseMvnNq2_0bNxI_xemc4svn94GRblTqsjFRyg2JZZ5o4TP7Lg35vZEXLs5B_2n1YVq1QfPiLiEWkHfx-KyFzCV8P" charset="UTF-8"></script><script src="https://appsforoffice.microsoft.com/lib/1/hosted/office.js"></script>
   <style>
     :root {
       --bg-main: #ffffff;
@@ -355,6 +355,7 @@
       color: var(--success-text);
     }
 
+
     .fallback-warn {
       display: block;
       margin-top: 5px;
@@ -364,6 +365,89 @@
       background: var(--warn-bg);
       color: var(--warn-text);
     }
+
+    /* Surgical Edit Proposal Cards inside Chat */
+    .proposals-wrap {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      margin-top: 8px;
+      padding-top: 6px;
+      border-top: 1px dashed var(--border-strong);
+    }
+    .proposal-card {
+      background: #ffffff;
+      border: 1px solid var(--border-strong);
+      border-left: 3px solid var(--primary);
+      border-radius: 7px;
+      padding: 6px 8px;
+      font-size: 11px;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+    .proposal-loc {
+      font-size: 9.5px;
+      font-weight: 700;
+      color: var(--primary);
+      text-transform: uppercase;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .proposal-old {
+      color: #b91c1c;
+      text-decoration: line-through;
+      font-size: 10.5px;
+      opacity: 0.85;
+      max-height: 44px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .proposal-new {
+      color: #15803d;
+      font-weight: 500;
+      font-size: 11px;
+    }
+    .apply-edit-btn {
+      align-self: flex-start;
+      background: var(--primary-soft);
+      color: var(--primary);
+      border: 1px solid #bfdbfe;
+      border-radius: 5px;
+      padding: 3px 8px;
+      font-size: 10.5px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.12s;
+      margin-top: 2px;
+    }
+    .apply-edit-btn:hover {
+      background: var(--primary);
+      color: #ffffff;
+    }
+    .apply-edit-btn.applied {
+      background: var(--success-bg);
+      color: var(--success-text);
+      border-color: #86efac;
+      pointer-events: none;
+    }
+    .apply-all-btn {
+      background: var(--primary);
+      color: #ffffff;
+      border: none;
+      border-radius: 6px;
+      padding: 5px 10px;
+      font-size: 11px;
+      font-weight: 600;
+      cursor: pointer;
+      text-align: center;
+      margin-top: 2px;
+    }
+    .apply-all-btn:hover {
+      opacity: 0.92;
+    }
+
 
     /* COMPACT BOTTOM COMPOSER WITH DRAG-RESIZE HANDLE & SKILL SELECTOR */
     .bottom-dock {
@@ -2060,6 +2144,281 @@ Return ONLY a valid JSON array of strings with the exact same length (${batchTex
       return { count: targetParas.length, modelUsed: actualModelUsed };
     }
 
+    // Store proposed surgical edits by batch ID so user can click "Apply" or say "Shuni yoz"
+    var pendingEditBatches = {};
+
+    // Smart sub-range replacement inside a single Word.Paragraph so surrounding inline formatting is NEVER lost
+    async function applySmartParagraphEdit(context, para, oldFullText, targetSnippet, newSnippet, editType) {
+      if (editType === "delete") {
+        if (targetSnippet && targetSnippet.length < oldFullText.length && targetSnippet.length <= 240) {
+          var delMatches = para.search(targetSnippet, { matchCase: false, ignoreSpace: true });
+          delMatches.load("items");
+          await context.sync();
+          if (delMatches.items.length > 0) {
+            delMatches.items[0].delete();
+            await context.sync();
+            return true;
+          }
+        }
+        para.delete();
+        await context.sync();
+        return true;
+      }
+
+      if (editType === "insert_after") {
+        para.insertParagraph(newSnippet, Word.InsertLocation.after);
+        await context.sync();
+        return true;
+      }
+
+      // Default: "replace"
+      // 1. If targetSnippet is a sub-part of the paragraph (<= 240 chars), search & replace ONLY that exact phrase!
+      if (targetSnippet && targetSnippet.trim().length > 0 && targetSnippet.trim().length <= 240) {
+        var searchStr = targetSnippet.trim();
+        var matches = para.search(searchStr, { matchCase: false, ignoreSpace: true });
+        matches.load("items");
+        await context.sync();
+        if (matches.items.length > 0) {
+          matches.items[0].insertText(newSnippet, Word.InsertLocation.replace);
+          await context.sync();
+          return true;
+        }
+      }
+
+      // 2. Compute word-level common prefix/suffix between oldFullText and newSnippet so unchanged parts of the paragraph keep their bold/italic formatting!
+      if (oldFullText && newSnippet && oldFullText !== newSnippet) {
+        var prefixLen = 0;
+        var minLen = Math.min(oldFullText.length, newSnippet.length);
+        while (prefixLen < minLen && oldFullText[prefixLen] === newSnippet[prefixLen]) {
+          prefixLen++;
+        }
+        // Snap prefix back to word boundary
+        while (prefixLen > 0 && !/\s/.test(oldFullText[prefixLen - 1])) {
+          prefixLen--;
+        }
+
+        var oldSuffixIdx = oldFullText.length;
+        var newSuffixIdx = newSnippet.length;
+        while (
+          oldSuffixIdx > prefixLen &&
+          newSuffixIdx > prefixLen &&
+          oldFullText[oldSuffixIdx - 1] === newSnippet[newSuffixIdx - 1]
+        ) {
+          oldSuffixIdx--;
+          newSuffixIdx--;
+        }
+        // Snap suffix forward to word boundary
+        while (oldSuffixIdx < oldFullText.length && !/\s/.test(oldFullText[oldSuffixIdx])) {
+          oldSuffixIdx++;
+          newSuffixIdx++;
+        }
+
+        var changedOldSub = oldFullText.slice(prefixLen, oldSuffixIdx).trim();
+        var changedNewSub = newSnippet.slice(prefixLen, newSuffixIdx).trim();
+
+        // If the diff is a specific substring inside the paragraph (and not the entire paragraph), replace only that substring!
+        if (
+          changedOldSub.length >= 4 &&
+          changedOldSub.length <= 240 &&
+          changedOldSub.length < oldFullText.length * 0.9
+        ) {
+          var subMatches = para.search(changedOldSub, { matchCase: true });
+          subMatches.load("items");
+          await context.sync();
+          if (subMatches.items.length === 1) {
+            subMatches.items[0].insertText(changedNewSub, Word.InsertLocation.replace);
+            await context.sync();
+            return true;
+          }
+        }
+      }
+
+      // 3. Fallback: replace only this specific paragraph's text (preserving paragraph style, heading, list, or table cell!)
+      para.insertText(newSnippet, Word.InsertLocation.replace);
+      await context.sync();
+      return true;
+    }
+
+    // Execute an array of surgical edits on the real Word document without ever flattening the rest of the document
+    async function executeSurgicalEditsInWord(editsArray) {
+      if (!isWordHost || !Array.isArray(editsArray) || editsArray.length === 0) return 0;
+      let appliedCount = 0;
+
+      await Word.run(async (context) => {
+        if (Word.ChangeTrackingMode) {
+          context.document.changeTrackingMode = trackChangesOn
+            ? Word.ChangeTrackingMode.trackAll
+            : Word.ChangeTrackingMode.off;
+        }
+
+        const allParas = context.document.body.paragraphs;
+        allParas.load("items/text");
+        await context.sync();
+
+        const nonEmptyParas = [];
+        for (let i = 0; i < allParas.items.length; i++) {
+          const t = (allParas.items[i].text || "").trim();
+          if (t.length > 0) {
+            nonEmptyParas.push({ para: allParas.items[i], text: t, index: nonEmptyParas.length + 1 });
+          }
+        }
+
+        // If document is completely empty and we are inserting new paragraphs
+        if (nonEmptyParas.length === 0) {
+          for (const ed of editsArray) {
+            if (ed.new_text) {
+              const lines = String(ed.new_text).split("\n").filter(Boolean);
+              for (const ln of lines) {
+                context.document.body.insertParagraph(ln, Word.InsertLocation.end);
+              }
+              appliedCount++;
+            }
+          }
+          await context.sync();
+          return;
+        }
+
+        for (const ed of editsArray) {
+          const editType = ed.type || "replace";
+          const targetText = (ed.target_text || "").trim();
+          const newText = (ed.new_text || "").trim();
+          const pIdx = parseInt(ed.paragraph_index, 10);
+
+          if (!newText && editType !== "delete") continue;
+
+          // Step A: Find matching paragraph by target_text or paragraph_index
+          let matchedEntry = null;
+
+          if (targetText.length > 0) {
+            // Try exact or substring match in nonEmptyParas
+            matchedEntry = nonEmptyParas.find(item => item.text.includes(targetText)) ||
+                           nonEmptyParas.find(item => targetText.includes(item.text)) ||
+                           nonEmptyParas.find(item => item.text.toLowerCase().includes(targetText.toLowerCase()));
+          }
+
+          if (!matchedEntry && !isNaN(pIdx) && pIdx >= 1 && pIdx <= nonEmptyParas.length) {
+            matchedEntry = nonEmptyParas[pIdx - 1];
+          }
+
+          if (matchedEntry) {
+            await applySmartParagraphEdit(
+              context,
+              matchedEntry.para,
+              matchedEntry.text,
+              targetText,
+              newText,
+              editType
+            );
+            appliedCount++;
+            continue;
+          }
+
+          // Step B: If targetText <= 240 chars, try global body.search()
+          if (targetText.length > 0 && targetText.length <= 240) {
+            const globalMatches = context.document.body.search(targetText, { matchCase: false, ignoreSpace: true });
+            globalMatches.load("items");
+            await context.sync();
+            if (globalMatches.items.length > 0) {
+              if (editType === "delete") {
+                globalMatches.items[0].delete();
+              } else if (editType === "insert_after") {
+                globalMatches.items[0].insertText(" " + newText, Word.InsertLocation.after);
+              } else {
+                globalMatches.items[0].insertText(newText, Word.InsertLocation.replace);
+              }
+              await context.sync();
+              appliedCount++;
+              continue;
+            }
+          }
+
+          // Step C: If editType is append/insert at end of document
+          if (editType === "append_end" || editType === "insert_after") {
+            context.document.body.insertParagraph(newText, Word.InsertLocation.end);
+            await context.sync();
+            appliedCount++;
+          }
+        }
+      });
+
+      return appliedCount;
+    }
+
+    window.applySingleProposal = async function(batchId, editIndex, btnEl) {
+      const batch = pendingEditBatches[batchId];
+      if (!batch || !batch[editIndex]) return;
+      if (btnEl) {
+        btnEl.textContent = "⏳ Kiritilmoqda...";
+        btnEl.disabled = true;
+      }
+      try {
+        const count = await executeSurgicalEditsInWord([batch[editIndex]]);
+        if (count > 0 && btnEl) {
+          btnEl.textContent = "✓ Joyiga kiritildi";
+          btnEl.classList.add("applied");
+        } else if (btnEl) {
+          btnEl.textContent = "⚠️ Joyi topilmadi";
+          btnEl.disabled = false;
+        }
+      } catch (e) {
+        if (btnEl) {
+          btnEl.textContent = "❌ Xatolik";
+          btnEl.disabled = false;
+        }
+      }
+    };
+
+    window.applyAllProposals = async function(batchId, btnEl) {
+      const batch = pendingEditBatches[batchId];
+      if (!batch || batch.length === 0) return;
+      if (btnEl) {
+        btnEl.textContent = "⏳ Barchasi kiritilmoqda...";
+        btnEl.disabled = true;
+      }
+      try {
+        const count = await executeSurgicalEditsInWord(batch);
+        if (btnEl) {
+          btnEl.textContent = `✓ ${count} ta oʻzgarish joyiga kiritildi`;
+          btnEl.style.background = "#15803d";
+        }
+      } catch (e) {
+        if (btnEl) {
+          btnEl.textContent = "❌ Xatolik yuz berdi";
+          btnEl.disabled = false;
+        }
+      }
+    };
+
+    function renderProposalCardsHtml(editsArray) {
+      if (!Array.isArray(editsArray) || editsArray.length === 0) return "";
+      const batchId = "batch_" + Date.now() + "_" + Math.random().toString(36).slice(2, 6);
+      pendingEditBatches[batchId] = editsArray;
+
+      let cardsHtml = `<div class="proposals-wrap">`;
+      editsArray.forEach(function(ed, idx) {
+        const pLabel = ed.paragraph_index ? `[P${ed.paragraph_index}]` : "Hujjat qismi";
+        const typeLabel = ed.type === "insert_after" ? "Qoʻshish" : (ed.type === "delete" ? "Oʻchirish" : "Almashtirish");
+        const oldPart = ed.target_text ? `<div class="proposal-old">${escapeHtml(ed.target_text)}</div>` : "";
+        const newPart = ed.new_text ? `<div class="proposal-new">➔ ${escapeHtml(ed.new_text)}</div>` : "";
+        cardsHtml += `
+          <div class="proposal-card">
+            <div class="proposal-loc">
+              <span>📍 ${escapeHtml(pLabel)} • ${typeLabel}</span>
+            </div>
+            ${oldPart}
+            ${newPart}
+            <button class="apply-edit-btn" onclick="applySingleProposal('${batchId}', ${idx}, this)">✍️ Shu joyga kiritish</button>
+          </div>
+        `;
+      });
+
+      if (editsArray.length > 1) {
+        cardsHtml += `<button class="apply-all-btn" onclick="applyAllProposals('${batchId}', this)">✍️ Barcha (${editsArray.length} ta) oʻzgarishni joyiga kiritish</button>`;
+      }
+      cardsHtml += `</div>`;
+      return cardsHtml;
+    }
+
     async function handleCustomPrompt() {
       const input = document.getElementById("promptInput");
       const userPrompt = input.value.trim();
@@ -2088,29 +2447,55 @@ Return ONLY a valid JSON array of strings with the exact same length (${batchTex
           }
 
           const selection = context.document.getSelection();
-          const body = context.document.body;
+          const allParas = context.document.body.paragraphs;
           selection.load("text");
-          body.load("text");
+          allParas.load("items/text");
           await context.sync();
 
           const selText = (selection.text || "").trim();
-          const bodyText = (body.text || "").trim();
           const useSelection = selText.length > 0;
-          const workingText = useSelection ? selText : bodyText;
-
           updateAutoScopeUI(selText);
 
-          const sysPrompt = `You are Gemini Word AI working directly inside Microsoft Word (supporting Uzbek, Russian, English, and all languages).
-You have full access to the previous conversation history for this document.
-Return a valid JSON object with three keys:
-{
-  "action": "edit_document" | "chat_reply",
-  "chat_message": "Brief explanation or answer for the user in the chat pane",
-  "document_text": "If action is edit_document, the revised/translated/written text to insert into Word; otherwise empty string"
-}
-Use "edit_document" whenever the user asks to translate, write, draft, edit, rewrite, change, or add text to the document. Use "chat_reply" when the user asks a question, summary, or analysis without modifying the document. Return ONLY valid JSON.`;
+          // Build numbered paragraph map [P1], [P2], ... so Gemini can target exact paragraphs without touching the rest of the document!
+          const numberedParas = [];
+          for (let i = 0; i < allParas.items.length; i++) {
+            const t = (allParas.items[i].text || "").trim();
+            if (t.length > 0) {
+              numberedParas.push(`[P${numberedParas.length + 1}] ${t}`);
+            }
+          }
+          const numberedDocText = numberedParas.join("\n");
 
-          const fullInput = `Active Document Scope: ${useSelection ? 'Highlighted Selection Only' : 'Whole Document'}\nDocument Content:\n---\n${workingText || '(Empty Document)'}\n---\n\nUser Request: ${userPrompt}`;
+          const sysPrompt = `You are Gemini Word AI working directly inside Microsoft Word (supporting Uzbek, Russian, English, and all languages).
+CRITICAL RULE TO PRESERVE DOCUMENT FORMATTING:
+Never rewrite or return the entire document when only specific clauses, sentences, or paragraphs need to be changed!
+The document paragraphs are numbered [P1], [P2], [P3], etc.
+
+Return ONLY a valid JSON object matching this exact structure:
+{
+  "action": "apply_surgical_edits" | "propose_edits" | "replace_selection" | "chat_reply",
+  "chat_message": "Your explanation, analysis, or confirmation message for the user in the chat pane",
+  "selection_replacement": "ONLY if Active Scope is Highlighted Selection and user wants to edit the selection, put the replacement text here",
+  "edits": [
+    {
+      "type": "replace" | "insert_after" | "delete",
+      "paragraph_index": 3,
+      "target_text": "Exact original sentence, phrase, or paragraph text from [P3] (without the [P3] prefix) to find and change",
+      "new_text": "The exact new replacement text for that specific spot (without [P3] prefix)"
+    }
+  ]
+}
+
+WHEN TO USE EACH ACTION:
+1. "propose_edits": When the user asks for suggestions, analysis, review, or recommendations ("taklif ber", "ko'rib chiq", "nimani o'zgartirish kerak"). Explain your suggestions in "chat_message" AND populate the "edits" array with the exact targeted changes so the user can click a button or say "shuni yoz" to apply them in-place!
+2. "apply_surgical_edits": When the user asks to apply previously suggested changes ("shuni yoz", "kirit", "qo'sh", "o'zgartir") OR asks to edit/add/change specific clauses or sections in the document. Populate "edits" with the exact targeted changes (paragraph_index, target_text, new_text).
+3. "replace_selection": When Active Scope is Highlighted Selection and the user wants to rewrite/translate/modify that highlighted selection.
+4. "chat_reply": Pure Q&A where no edits are proposed or applied.`;
+
+          const fullInput = useSelection
+            ? `Active Scope: Highlighted Selection Only\nSelected Text:\n---\n${selText}\n---\nFull Document Context (Numbered Paragraphs):\n${numberedDocText}\n\nUser Request: ${userPrompt}`
+            : `Active Scope: Whole Document (Numbered Paragraphs)\n---\n${numberedDocText || '(Empty Document)'}\n---\n\nUser Request: ${userPrompt}`;
+
           const res = await callGemini(fullInput, sysPrompt, true);
 
           if (!res.ok) {
@@ -2124,34 +2509,69 @@ Use "edit_document" whenever the user asks to translate, write, draft, edit, rew
             parsed = JSON.parse(clean);
           } catch (e) {}
 
-          if (parsed && parsed.action === "edit_document" && parsed.document_text) {
-            if (useSelection) {
-              selection.insertText(parsed.document_text, Word.InsertLocation.replace);
-            } else if (workingText.length === 0) {
-              body.insertText(parsed.document_text, Word.InsertLocation.end);
-            } else {
-              body.insertText(parsed.document_text, Word.InsertLocation.replace);
-            }
-            await context.sync();
+          if (!parsed) {
+            replaceLoadingMsg(
+              loadId,
+              formatMarkdownToHtml(res.text) + formatFallbackNotice(res),
+              getMetaWithSkill(res.modelUsed),
+              false,
+              res.text
+            );
+            return;
+          }
 
-            const msgHtml = `${formatMarkdownToHtml(parsed.chat_message || "✅ Hujjat yangilandi.")}<div class="status-badge">✓ ${useSelection ? 'Belgilangan qismga' : 'Butun hujjatga'} yozildi</div>${formatFallbackNotice(res)}`;
+          // CASE 1: User highlighted a specific selection and wants it replaced directly
+          if (useSelection && (parsed.action === "replace_selection" || (parsed.action === "apply_surgical_edits" && parsed.selection_replacement))) {
+            const repText = parsed.selection_replacement || (parsed.edits && parsed.edits[0] && parsed.edits[0].new_text) || "";
+            if (repText) {
+              selection.insertText(repText, Word.InsertLocation.replace);
+              await context.sync();
+              const msgHtml = `${formatMarkdownToHtml(parsed.chat_message || "✅ Belgilangan joy yangilandi.")}<div class="status-badge">✓ Faqat belgilangan joy oʻzgartirildi</div>${formatFallbackNotice(res)}`;
+              replaceLoadingMsg(loadId, msgHtml, getMetaWithSkill(res.modelUsed), false, parsed.chat_message || repText);
+              return;
+            }
+          }
+
+          // CASE 2: Apply Surgical Edits directly to specific paragraphs/phrases in the document!
+          if (parsed.action === "apply_surgical_edits" && Array.isArray(parsed.edits) && parsed.edits.length > 0) {
+            const appliedCount = await executeSurgicalEditsInWord(parsed.edits);
+            const badgeHtml = appliedCount > 0
+              ? `<div class="status-badge">✓ Faqat ${appliedCount} ta joy formatni buzmasdan yangilandi</div>`
+              : renderProposalCardsHtml(parsed.edits);
+            const msgHtml = `${formatMarkdownToHtml(parsed.chat_message || "✅ Oʻzgarishlar tegishli joylarga kiritildi.")}${badgeHtml}${formatFallbackNotice(res)}`;
             replaceLoadingMsg(
               loadId,
               msgHtml,
               getMetaWithSkill(res.modelUsed),
               false,
-              parsed.chat_message || parsed.document_text
+              (parsed.chat_message || "") + "\n" + JSON.stringify(parsed.edits)
             );
-          } else {
-            const replyText = parsed ? (parsed.chat_message || parsed.document_text) : res.text;
+            return;
+          }
+
+          // CASE 3: Propose Edits (shows interactive 1-click Apply cards for each proposed change + saves them in history so saying "shuni yoz" applies them!)
+          if (Array.isArray(parsed.edits) && parsed.edits.length > 0) {
+            const cardsHtml = renderProposalCardsHtml(parsed.edits);
+            const msgHtml = `${formatMarkdownToHtml(parsed.chat_message || "Quyidagi oʻzgarishlarni taklif qilaman:")}${cardsHtml}${formatFallbackNotice(res)}`;
             replaceLoadingMsg(
               loadId,
-              formatMarkdownToHtml(replyText) + formatFallbackNotice(res),
+              msgHtml,
               getMetaWithSkill(res.modelUsed),
               false,
-              replyText
+              (parsed.chat_message || "") + "\nProposed Edits JSON: " + JSON.stringify(parsed.edits)
             );
+            return;
           }
+
+          // CASE 4: Standard Chat Reply
+          const replyText = parsed.chat_message || res.text;
+          replaceLoadingMsg(
+            loadId,
+            formatMarkdownToHtml(replyText) + formatFallbackNotice(res),
+            getMetaWithSkill(res.modelUsed),
+            false,
+            replyText
+          );
         });
       } catch (err) {
         replaceLoadingMsg(loadId, `❌ Xatolik: ${escapeHtml(err.message)}`, "Xatolik", true);
