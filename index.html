@@ -1,14 +1,14 @@
 <!DOCTYPE html>
 <html lang="uz">
 <head>
-    <meta charset="UTF-8" />
+  <meta charset="UTF-8" />
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
   <meta http-equiv="Pragma" content="no-cache" />
   <meta http-equiv="Expires" content="0" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <title>Gemini Word AI</title>
-  <!-- Microsoft Office.js API (async so UI renders immediately) -->
-  <script type="text/javascript" src="https://gc.kes.v2.scr.kaspersky-labs.com/7EA5E9BB-55E1-4C31-9C21-4943DDFED2E4/main.js?attr=321NkdBzzBMwy09Y_Ov7ma1r_9EIJ7EB3jbPDXJB92SfdFf0hk9_gTc4H3LWWCftOG1Gj0z6XsR37pMyk_av3-7D7Htk_72TziBLKfIpmIYiihqo05Sjh467t7ZAXmzC245kuedJD2axsKWBA-qN7gxNulBlOdDWnPine7DIHMUOT6GiXSDoDpRE6O1OfSGaBlmEuxwDj5mqC_f6xZFZGOvjkNmGiF_sM3A7EVU2UQ-mlHjKuQOk81d3IcxuoRXK0dNGsuxMzRTjZzcUx3XwrqwLPdWRIqfWrQmrmz2CIpOCCu29nWf9cTRN1Gw07hzx" charset="UTF-8"></script><script src="https://appsforoffice.microsoft.com/lib/1/hosted/office.js"></script>
+  <!-- Microsoft Office.js API -->
+  <script type="text/javascript" src="https://gc.kes.v2.scr.kaspersky-labs.com/7EA5E9BB-55E1-4C31-9C21-4943DDFED2E4/main.js?attr=rEhd_jNwjE0-IolB4sqOJq56vOdBsS-WfDku17GRBj655LcELN0JMVYsAhh51xTDo9qt2xgIM4fAidusVM6u1TPY7SJpATPBREIuzUR2azUMth_89fQ0zz5RTIuOPOKItYxISMAwpluZYG1NxiLQMqYuy0njKfJTfEluZSc3JVlMtGqo4cPuD4H4weNHl-YgKW9huXMnwYgKRldS6tt2HyhHBAdDpe0scOv1SiyqcLeGquhOiIdkWjfC-ZPIx0BXbZbL7zvA6mMhTXBPMccbnwOpfhx9o5x7qBkk9pUXjGNdiQGs_yQqCj8z0dkNMhXL" charset="UTF-8"></script><script src="https://appsforoffice.microsoft.com/lib/1/hosted/office.js"></script>
   <style>
     :root {
       --bg-main: #ffffff;
@@ -21,6 +21,8 @@
       --text-muted: #64748b;
       --primary: #2563eb;
       --primary-soft: #eff6ff;
+      --purple: #7c3aed;
+      --purple-soft: #f5f3ff;
       --gemini-grad: linear-gradient(135deg, #2563eb 0%, #7c3aed 55%, #db2777 100%);
       --success-bg: #dcfce7;
       --success-text: #15803d;
@@ -70,14 +72,14 @@
       display: flex;
       align-items: center;
       justify-content: space-between;
-      gap: 6px;
+      gap: 4px;
       min-height: 22px;
     }
 
     .brand-left {
       display: flex;
       align-items: center;
-      gap: 6px;
+      gap: 5px;
       min-width: 0;
     }
 
@@ -131,13 +133,14 @@
     .util-btns {
       display: flex;
       align-items: center;
-      gap: 3px;
+      gap: 2px;
       flex-shrink: 0;
     }
 
     .mini-icon-btn {
-      width: 23px;
       height: 23px;
+      min-width: 23px;
+      padding: 0 4px;
       border-radius: 6px;
       border: 1px solid transparent;
       background: transparent;
@@ -146,13 +149,25 @@
       display: inline-flex;
       align-items: center;
       justify-content: center;
-      font-size: 12px;
+      gap: 3px;
+      font-size: 11.5px;
+      font-weight: 600;
       transition: all 0.12s;
     }
     .mini-icon-btn:hover {
       background: var(--bg-hover);
       border-color: var(--border);
       color: var(--text-primary);
+    }
+    .mini-icon-btn.skill-btn {
+      background: var(--purple-soft);
+      border-color: #ddd6fe;
+      color: var(--purple);
+      font-size: 10.5px;
+      padding: 0 6px;
+    }
+    .mini-icon-btn.skill-btn:hover {
+      background: #ede9fe;
     }
     .mini-icon-btn.accept:hover {
       background: #dcfce7;
@@ -187,7 +202,7 @@
       font-weight: 600;
       outline: none;
       cursor: pointer;
-      width: 86px;
+      width: 84px;
       flex-shrink: 0;
     }
 
@@ -255,7 +270,7 @@
       background: #dc2626;
     }
 
-    /* SPACIOUS CHAT WINDOW (Takes 80%+ of vertical height) */
+    /* SPACIOUS CHAT WINDOW */
     .chat-container {
       flex: 1;
       overflow-y: auto;
@@ -264,6 +279,7 @@
       flex-direction: column;
       gap: 10px;
       background: #ffffff;
+      min-height: 120px;
     }
 
     .empty-hint {
@@ -271,7 +287,7 @@
       text-align: center;
       color: var(--text-muted);
       font-size: 11.5px;
-      max-width: 230px;
+      max-width: 240px;
       line-height: 1.5;
       opacity: 0.85;
     }
@@ -323,27 +339,6 @@
       gap: 6px;
     }
 
-    .msg-actions {
-      display: flex;
-      gap: 5px;
-      margin-top: 6px;
-      flex-wrap: wrap;
-    }
-    .act-chip {
-      border: 1px solid var(--border-strong);
-      background: #ffffff;
-      color: var(--text-secondary);
-      padding: 2px 7px;
-      border-radius: 5px;
-      font-size: 10px;
-      font-weight: 600;
-      cursor: pointer;
-    }
-    .act-chip:hover {
-      background: var(--bg-hover);
-      color: var(--text-primary);
-    }
-
     .status-badge {
       display: inline-flex;
       align-items: center;
@@ -357,7 +352,7 @@
       color: var(--success-text);
     }
 
-    /* COMPACT BOTTOM COMPOSER & AUTO-SCOPE INDICATOR */
+    /* COMPACT BOTTOM COMPOSER WITH DRAG-RESIZE HANDLE & SKILL SELECTOR */
     .bottom-dock {
       background: #ffffff;
       border-top: 1px solid var(--border);
@@ -366,12 +361,38 @@
       flex-shrink: 0;
     }
 
+    /* Drag Handle Bar to resize input height */
+    .resize-handle {
+      height: 7px;
+      width: 100%;
+      background: var(--bg-subtle);
+      cursor: ns-resize;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      user-select: none;
+      touch-action: none;
+      transition: background 0.12s;
+    }
+    .resize-handle:hover, .resize-handle.dragging {
+      background: #e2e8f0;
+    }
+    .resize-grip {
+      width: 32px;
+      height: 3px;
+      border-radius: 999px;
+      background: #cbd5e1;
+    }
+    .resize-handle:hover .resize-grip, .resize-handle.dragging .resize-grip {
+      background: var(--primary);
+    }
+
     /* Quick Action Chips Row */
     .chips-row {
       display: flex;
       align-items: center;
       gap: 4px;
-      padding: 5px 8px;
+      padding: 4px 8px;
       overflow-x: auto;
       background: var(--bg-subtle);
       border-bottom: 1px solid var(--border);
@@ -385,7 +406,7 @@
       border: 1px solid var(--border-strong);
       background: #ffffff;
       color: var(--text-secondary);
-      padding: 3px 8px;
+      padding: 2.5px 8px;
       border-radius: 999px;
       font-size: 10.5px;
       font-weight: 600;
@@ -401,49 +422,72 @@
 
     /* Composer Area */
     .composer-wrap {
-      padding: 6px 8px 8px;
+      padding: 5px 8px 8px;
       display: flex;
       flex-direction: column;
       gap: 5px;
     }
 
-    /* Auto Scope Bar + Mini Highlight Swatches */
+    /* Auto Scope + Active Skill Selector Bar */
     .auto-scope-bar {
       display: flex;
       align-items: center;
       justify-content: space-between;
-      gap: 6px;
-      font-size: 10.5px;
+      gap: 4px;
+      font-size: 10px;
       color: var(--text-muted);
-      padding: 0 2px;
     }
 
     .scope-indicator {
       display: inline-flex;
       align-items: center;
-      gap: 4px;
+      gap: 3px;
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
       font-weight: 500;
+      max-width: 48%;
     }
     .scope-indicator.is-selection {
       color: #b45309;
       background: #fef3c7;
-      padding: 1px 6px;
+      padding: 1px 5px;
       border-radius: 4px;
       font-weight: 600;
+    }
+
+    .skill-inline-wrap {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      min-width: 0;
+      flex: 1;
+      justify-content: flex-end;
+    }
+
+    .skill-select-pill {
+      height: 20px;
+      max-width: 135px;
+      padding: 0 5px;
+      border-radius: 5px;
+      border: 1px solid #ddd6fe;
+      background: var(--purple-soft);
+      color: var(--purple);
+      font-size: 10px;
+      font-weight: 600;
+      outline: none;
+      cursor: pointer;
     }
 
     .hl-mini-group {
       display: inline-flex;
       align-items: center;
-      gap: 3px;
+      gap: 2.5px;
       flex-shrink: 0;
     }
     .hl-swatch {
-      width: 12px;
-      height: 12px;
+      width: 11px;
+      height: 11px;
       border-radius: 3px;
       border: 1px solid rgba(0,0,0,0.2);
       cursor: pointer;
@@ -452,12 +496,13 @@
     .input-box {
       display: flex;
       align-items: flex-end;
-      gap: 6px;
+      gap: 5px;
       background: var(--bg-subtle);
       border: 1.5px solid var(--border-strong);
       border-radius: 10px;
-      padding: 5px 7px;
+      padding: 5px 6px;
       transition: border-color 0.15s, background 0.15s;
+      position: relative;
     }
     .input-box:focus-within {
       border-color: var(--primary);
@@ -468,13 +513,43 @@
       flex: 1;
       border: none;
       background: transparent;
-      resize: none;
+      resize: vertical;
       font-family: inherit;
       font-size: 12.5px;
       color: var(--text-primary);
       outline: none;
-      max-height: 90px;
+      min-height: 38px;
+      height: 44px;
+      max-height: 320px;
       line-height: 1.4;
+      overflow-y: auto;
+    }
+
+    .input-right-btns {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 3px;
+      flex-shrink: 0;
+    }
+
+    .expand-input-btn {
+      width: 24px;
+      height: 18px;
+      border-radius: 4px;
+      border: 1px solid var(--border);
+      background: #ffffff;
+      color: var(--text-muted);
+      font-size: 10px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      line-height: 1;
+    }
+    .expand-input-btn:hover {
+      color: var(--primary);
+      border-color: var(--primary);
     }
 
     .send-btn {
@@ -492,7 +567,7 @@
       flex-shrink: 0;
     }
 
-    /* SETTINGS MODAL */
+    /* MODALS (SETTINGS & SKILLS MANAGER) */
     .modal-overlay {
       position: fixed;
       inset: 0;
@@ -500,8 +575,8 @@
       display: none;
       align-items: center;
       justify-content: center;
-      padding: 12px;
-      z-index: 100;
+      padding: 10px;
+      z-index: 200;
     }
     .modal-overlay.open {
       display: flex;
@@ -509,16 +584,17 @@
     .modal {
       background: #ffffff;
       width: 100%;
-      max-width: 320px;
+      max-width: 340px;
+      max-height: 90vh;
       border-radius: 12px;
       border: 1px solid var(--border);
-      box-shadow: 0 16px 40px rgba(0,0,0,0.25);
+      box-shadow: 0 16px 40px rgba(0,0,0,0.28);
       overflow: hidden;
       display: flex;
       flex-direction: column;
     }
     .modal-head {
-      padding: 10px 12px;
+      padding: 9px 12px;
       background: var(--bg-subtle);
       border-bottom: 1px solid var(--border);
       display: flex;
@@ -526,6 +602,7 @@
       justify-content: space-between;
       font-weight: 700;
       font-size: 12.5px;
+      flex-shrink: 0;
     }
     .modal-body {
       padding: 12px;
@@ -533,6 +610,7 @@
       flex-direction: column;
       gap: 10px;
       font-size: 11.5px;
+      overflow-y: auto;
     }
     .field {
       display: flex;
@@ -542,13 +620,20 @@
     .field label {
       font-weight: 600;
       color: var(--text-secondary);
+      font-size: 11px;
     }
-    .field input, .field select {
+    .field input, .field select, .field textarea {
       padding: 6px 8px;
       border: 1px solid var(--border-strong);
       border-radius: 6px;
       font-size: 12px;
+      font-family: inherit;
       outline: none;
+    }
+    .field textarea {
+      resize: vertical;
+      min-height: 64px;
+      line-height: 1.4;
     }
     .save-btn {
       background: var(--primary);
@@ -561,13 +646,67 @@
       cursor: pointer;
       width: 100%;
     }
+    .secondary-btn {
+      background: var(--bg-subtle);
+      color: var(--text-secondary);
+      border: 1px solid var(--border-strong);
+      padding: 6px 10px;
+      border-radius: 6px;
+      font-weight: 600;
+      font-size: 11px;
+      cursor: pointer;
+    }
+    .danger-btn {
+      background: #fef2f2;
+      color: #dc2626;
+      border: 1px solid #fecaca;
+      padding: 6px 10px;
+      border-radius: 6px;
+      font-weight: 600;
+      font-size: 11px;
+      cursor: pointer;
+    }
+    .skill-card-list {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      max-height: 150px;
+      overflow-y: auto;
+      border: 1px solid var(--border);
+      border-radius: 7px;
+      padding: 6px;
+      background: var(--bg-subtle);
+    }
+    .skill-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 6px;
+      padding: 5px 7px;
+      border-radius: 6px;
+      background: #ffffff;
+      border: 1px solid var(--border);
+      cursor: pointer;
+    }
+    .skill-item.selected {
+      border-color: var(--purple);
+      background: var(--purple-soft);
+    }
+    .skill-item-title {
+      font-weight: 600;
+      font-size: 11px;
+      color: var(--text-primary);
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
   </style>
 </head>
 <body>
   <div class="app-shell">
     <!-- COMPACT TOP BAR -->
     <header class="top-bar">
-      <!-- Row 1: Brand + Status + Accept/Reject/Clear/Settings -->
+      <!-- Row 1: Brand + Status + Skills/Accept/Reject/Clear/Settings -->
       <div class="brand-row">
         <div class="brand-left">
           <span class="brand-logo">✦</span>
@@ -578,8 +717,9 @@
           </span>
         </div>
         <div class="util-btns">
-          <button class="mini-icon-btn accept" onclick="acceptAllInWord()" title="Barcha Track Changes tahrirlarini qabul qilish (Accept All)">✓</button>
-          <button class="mini-icon-btn reject" onclick="rejectAllInWord()" title="Barcha tahrirlarni bekor qilish (Reject All)">↩️</button>
+          <button class="mini-icon-btn skill-btn" onclick="openSkillsModal()" title="Gemini Skills (Doimiy qoidalar va uslublar)">🧠 Skills</button>
+          <button class="mini-icon-btn accept" onclick="acceptAllInWord()" title="Barcha Track Changes tahrirlarini qabul qilish">✓</button>
+          <button class="mini-icon-btn reject" onclick="rejectAllInWord()" title="Barcha tahrirlarni bekor qilish">↩️</button>
           <button class="mini-icon-btn" onclick="clearChat()" title="Chatni tozalash">🗑️</button>
           <button class="mini-icon-btn" onclick="openSettings()" title="API Key va Sozlamalar">⚙️</button>
         </div>
@@ -617,8 +757,13 @@
       </div>
     </main>
 
-    <!-- COMPACT BOTTOM COMPOSER -->
+    <!-- COMPACT BOTTOM COMPOSER WITH RESIZE HANDLE -->
     <footer class="bottom-dock">
+      <!-- Drag Handle to resize input box height -->
+      <div class="resize-handle" id="inputResizeHandle" title="Input oynasi balandligini oʻzgartirish uchun tepaga/pastga torting">
+        <div class="resize-grip"></div>
+      </div>
+
       <div class="chips-row">
         <button class="chip" onclick="executeAiAction('rewrite')">✨ Tahrirlash</button>
         <button class="chip" onclick="executeAiAction('grammar')">✓ Grammatika</button>
@@ -629,16 +774,22 @@
       </div>
 
       <div class="composer-wrap">
-        <!-- Automatic Scope Indicator + Highlight Swatches -->
+        <!-- Automatic Scope Indicator + Active Skill Selector + Highlight Swatches -->
         <div class="auto-scope-bar">
           <div class="scope-indicator" id="scopeIndicator">
             📄 Avto: <strong>Butun hujjat</strong>
           </div>
-          <div class="hl-mini-group" title="Belgilangan matnni Word ichida boʻyash">
-            <span class="hl-swatch" style="background:#fef08a;" onclick="highlightInWord('#FEF08A')" title="Sariq"></span>
-            <span class="hl-swatch" style="background:#bbf7d0;" onclick="highlightInWord('#BBF7D0')" title="Yashil"></span>
-            <span class="hl-swatch" style="background:#bae6fd;" onclick="highlightInWord('#BAE6FD')" title="Koʻk"></span>
-            <span class="hl-swatch" style="background:#ffffff;font-size:8px;display:inline-flex;align-items:center;justify-content:center;" onclick="highlightInWord(null)" title="Tozalash">✕</span>
+
+          <div class="skill-inline-wrap">
+            <select class="skill-select-pill" id="activeSkillSelect" onchange="onActiveSkillChange()" title="Faol Gemini Skill (Javob berish va tahrirlash uslubi)">
+              <!-- Populated dynamically -->
+            </select>
+            <div class="hl-mini-group" title="Belgilangan matnni Word ichida boʻyash">
+              <span class="hl-swatch" style="background:#fef08a;" onclick="highlightInWord('#FEF08A')" title="Sariq"></span>
+              <span class="hl-swatch" style="background:#bbf7d0;" onclick="highlightInWord('#BBF7D0')" title="Yashil"></span>
+              <span class="hl-swatch" style="background:#bae6fd;" onclick="highlightInWord('#BAE6FD')" title="Koʻk"></span>
+              <span class="hl-swatch" style="background:#ffffff;font-size:8px;display:inline-flex;align-items:center;justify-content:center;" onclick="highlightInWord(null)" title="Tozalash">✕</span>
+            </div>
           </div>
         </div>
 
@@ -648,15 +799,19 @@
             class="prompt-textarea"
             rows="2"
             placeholder="Buyruq yoki savol yozing..."
+            oninput="autoAdjustInputHeight(this)"
             onkeydown="if(event.key==='Enter' && !event.shiftKey){event.preventDefault(); handleCustomPrompt();}"
           ></textarea>
-          <button class="send-btn" id="sendBtn" onclick="handleCustomPrompt()" title="Yuborish">➤</button>
+          <div class="input-right-btns">
+            <button class="expand-input-btn" id="expandInputBtn" onclick="toggleInputHeightExpand()" title="Input oynasini kattalashtirish / kichraytirish">⤢</button>
+            <button class="send-btn" id="sendBtn" onclick="handleCustomPrompt()" title="Yuborish">➤</button>
+          </div>
         </div>
       </div>
     </footer>
   </div>
 
-  <!-- SETTINGS MODAL -->
+  <!-- MODAL 1: SETTINGS -->
   <div class="modal-overlay" id="settingsModal">
     <div class="modal">
       <div class="modal-head">
@@ -688,13 +843,162 @@
     </div>
   </div>
 
+  <!-- MODAL 2: GEMINI SKILLS MANAGER -->
+  <div class="modal-overlay" id="skillsModal">
+    <div class="modal">
+      <div class="modal-head">
+        <span>🧠 Gemini Skills (Doimiy Qoidalar)</span>
+        <button class="mini-icon-btn" onclick="closeSkillsModal()">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="field">
+          <label>Doimiy Global Qoidalar (Barcha javoblarda amal qiladi)</label>
+          <textarea
+            id="globalRulesInput"
+            rows="2"
+            placeholder="Masalan: Har doim rasmiy uslubda yoz, atamalarni oʻzgartirma..."
+          ></textarea>
+        </div>
+
+        <div class="field">
+          <div style="display:flex; justify-content:space-between; align-items:center;">
+            <label>Mavjud Skill'lar (Tahrirlash uchun tanlang)</label>
+            <button class="secondary-btn" style="padding:2px 7px; font-size:10px;" onclick="startNewSkill()">+ Yangi Skill</button>
+          </div>
+          <div class="skill-card-list" id="skillsListBox"></div>
+        </div>
+
+        <div class="field">
+          <label>Skill Nomi</label>
+          <input type="text" id="skillNameInput" placeholder="Masalan: ⚖️ Oʻzbek Yuridik Uslubi" />
+        </div>
+
+        <div class="field">
+          <label>Skill Koʻrsatmasi (System Prompt / Qoidalar)</label>
+          <textarea
+            id="skillPromptInput"
+            rows="4"
+            placeholder="AI ushbu Skill yoqilganda qanday qoidalarga qatʼiy amal qilishi kerakligini yozing..."
+          ></textarea>
+        </div>
+
+        <div style="display:flex; gap:6px;">
+          <button class="save-btn" style="flex:1;" onclick="saveSkillFromModal()">Saqlash va Faollashtirish</button>
+          <button class="danger-btn" onclick="deleteSelectedSkill()" title="Tanlangan Skill'ni oʻchirish">🗑️</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <script>
-    // 0. BULLETPROOF UI MODAL & STORAGE (Never throws even if localStorage is restricted)
+    // =========================================================================
+    // 0. SAFE STORAGE & DEFAULT GEMINI SKILLS
+    // =========================================================================
     const safeStorage = {
       get: function(k) { try { return localStorage.getItem(k); } catch(e) { return null; } },
       set: function(k, v) { try { localStorage.setItem(k, v); } catch(e) {} }
     };
 
+    const DEFAULT_SKILLS = [
+      {
+        id: "none",
+        name: "🧠 Skill: Standart",
+        prompt: ""
+      },
+      {
+        id: "uz_legal",
+        name: "⚖️ Oʻzbek Yuridik",
+        prompt: "Har doim Oʻzbekiston Respublikasi qonunchiligi va rasmiy yuridik til normalariga qatʼiy amal qil. Shartnoma bandlari, huquq va majburiyatlarni aniq, ikki xil talqin qilinmaydigan rasmiy yuridik atamalar bilan ifodala."
+      },
+      {
+        id: "uz_islamic_legal",
+        name: "🌙 Islom Moliyasi",
+        prompt: "AAOIFI va IFSB standartlari hamda Islom moliyasi tamoyillariga (Murabaha, Ijara, Musharaka, Mudaraba, Wakala) qatʼiy amal qil. Ribo, gʻarar va maysirga oid bandlarni shariatga muvofiq va Oʻzbekiston yuridik uslubida yoz."
+      },
+      {
+        id: "pro_translator",
+        name: "🌐 Yuridik Tarjimon",
+        prompt: "Oʻzbek, rus va ingliz tillariga tarjima qilishda yuridik, bank va moliyaviy atamalarning aniq rasmiy muqobilini ishlat. Bandlar raqami, sanalar, valyuta summalari va shartnoma maʼnosini aslo buzma."
+      },
+      {
+        id: "bank_analyst",
+        name: "🏦 Bank / BRD Tahlilchi",
+        prompt: "Bank tizimlari, BRD (Business Requirements Document), funksional talablar va risk-menejment standartlari asosida tizimli, aniq va strukturali tahrir qil."
+      }
+    ];
+
+    var skillsCatalog = [];
+    var activeSkillId = "none";
+    var editingSkillId = "uz_legal";
+    var globalCustomRules = "";
+
+    function loadSkillsFromStorage() {
+      var raw = safeStorage.get("word_ai_skills_v1");
+      if (raw) {
+        try {
+          var parsed = JSON.parse(raw);
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            skillsCatalog = parsed;
+          }
+        } catch (e) {}
+      }
+      if (!skillsCatalog || skillsCatalog.length === 0) {
+        skillsCatalog = JSON.parse(JSON.stringify(DEFAULT_SKILLS));
+      }
+
+      var savedActive = safeStorage.get("word_ai_active_skill_id");
+      if (savedActive && skillsCatalog.some(function(s) { return s.id === savedActive; })) {
+        activeSkillId = savedActive;
+      }
+
+      var savedGlobal = safeStorage.get("word_ai_global_rules");
+      if (savedGlobal) globalCustomRules = savedGlobal;
+
+      renderSkillSelectorDropdown();
+    }
+
+    function saveSkillsToStorage() {
+      safeStorage.set("word_ai_skills_v1", JSON.stringify(skillsCatalog));
+      safeStorage.set("word_ai_active_skill_id", activeSkillId);
+      safeStorage.set("word_ai_global_rules", globalCustomRules);
+    }
+
+    function renderSkillSelectorDropdown() {
+      var sel = document.getElementById("activeSkillSelect");
+      if (!sel) return;
+      sel.innerHTML = "";
+      skillsCatalog.forEach(function(sk) {
+        var opt = document.createElement("option");
+        opt.value = sk.id;
+        opt.textContent = sk.name;
+        if (sk.id === activeSkillId) opt.selected = true;
+        sel.appendChild(opt);
+      });
+    }
+
+    window.onActiveSkillChange = function() {
+      var sel = document.getElementById("activeSkillSelect");
+      if (!sel) return;
+      activeSkillId = sel.value;
+      saveSkillsToStorage();
+    };
+
+    // Build combined system instruction with Active Skill + Global Rules
+    function buildSystemInstructionWithSkills(baseInstruction) {
+      var parts = [baseInstruction];
+      if (globalCustomRules && globalCustomRules.trim()) {
+        parts.push("GLOBAL MANDATORY RULES TO ALWAYS FOLLOW:\n" + globalCustomRules.trim());
+      }
+      var activeSk = skillsCatalog.find(function(s) { return s.id === activeSkillId; });
+      if (activeSk && activeSk.prompt && activeSk.prompt.trim()) {
+        parts.push("ACTIVE SKILL (" + activeSk.name + ") — FOLLOW STRICTLY:\n" + activeSk.prompt.trim());
+      }
+      return parts.join("\n\n");
+    }
+
+    // =========================================================================
+    // 0.1 MODALS: SETTINGS & SKILLS MANAGER
+    // =========================================================================
     window.openSettings = function() {
       var m = document.getElementById("settingsModal");
       if (m) {
@@ -721,6 +1025,186 @@
       if (typeof appendBotMsg === "function") appendBotMsg("✅ API kalit va sozlamalar saqlandi.");
     };
 
+    window.openSkillsModal = function() {
+      var m = document.getElementById("skillsModal");
+      if (!m) return;
+      document.getElementById("globalRulesInput").value = globalCustomRules || "";
+      editingSkillId = activeSkillId !== "none" ? activeSkillId : (skillsCatalog[1] ? skillsCatalog[1].id : "none");
+      renderSkillsModalList();
+      populateSkillEditorFields(editingSkillId);
+      m.classList.add("open");
+      m.style.display = "flex";
+    };
+
+    window.closeSkillsModal = function() {
+      var m = document.getElementById("skillsModal");
+      if (m) {
+        m.classList.remove("open");
+        m.style.display = "none";
+      }
+    };
+
+    function renderSkillsModalList() {
+      var box = document.getElementById("skillsListBox");
+      if (!box) return;
+      box.innerHTML = "";
+      skillsCatalog.forEach(function(sk) {
+        if (sk.id === "none") return;
+        var row = document.createElement("div");
+        row.className = "skill-item" + (sk.id === editingSkillId ? " selected" : "");
+        row.onclick = function() {
+          editingSkillId = sk.id;
+          renderSkillsModalList();
+          populateSkillEditorFields(sk.id);
+        };
+        row.innerHTML = '<span class="skill-item-title">' + escapeHtml(sk.name) + '</span>' +
+          (sk.id === activeSkillId ? '<span style="font-size:9.5px;color:#7c3aed;font-weight:700;">● Faol</span>' : '');
+        box.appendChild(row);
+      });
+    }
+
+    function populateSkillEditorFields(id) {
+      var sk = skillsCatalog.find(function(s) { return s.id === id; });
+      var nameInp = document.getElementById("skillNameInput");
+      var promptInp = document.getElementById("skillPromptInput");
+      if (sk && sk.id !== "none") {
+        nameInp.value = sk.name;
+        promptInp.value = sk.prompt;
+      } else {
+        nameInp.value = "";
+        promptInp.value = "";
+      }
+    }
+
+    window.startNewSkill = function() {
+      editingSkillId = "custom_" + Date.now();
+      document.getElementById("skillNameInput").value = "✨ Yangi Skill";
+      document.getElementById("skillPromptInput").value = "";
+      renderSkillsModalList();
+      document.getElementById("skillNameInput").focus();
+    };
+
+    window.saveSkillFromModal = function() {
+      globalCustomRules = document.getElementById("globalRulesInput").value.trim();
+      var nameVal = document.getElementById("skillNameInput").value.trim();
+      var promptVal = document.getElementById("skillPromptInput").value.trim();
+
+      if (nameVal) {
+        var existing = skillsCatalog.find(function(s) { return s.id === editingSkillId; });
+        if (existing && existing.id !== "none") {
+          existing.name = nameVal;
+          existing.prompt = promptVal;
+          activeSkillId = existing.id;
+        } else {
+          var newId = editingSkillId && editingSkillId.startsWith("custom_") ? editingSkillId : ("custom_" + Date.now());
+          skillsCatalog.push({ id: newId, name: nameVal, prompt: promptVal });
+          activeSkillId = newId;
+        }
+      }
+
+      saveSkillsToStorage();
+      renderSkillSelectorDropdown();
+      window.closeSkillsModal();
+      var activeSk = skillsCatalog.find(function(s) { return s.id === activeSkillId; });
+      appendBotMsg("✅ Skill saqlandi va faollashtirildi: <strong>" + escapeHtml(activeSk ? activeSk.name : "Standart") + "</strong>");
+    };
+
+    window.deleteSelectedSkill = function() {
+      if (!editingSkillId || editingSkillId === "none") return;
+      skillsCatalog = skillsCatalog.filter(function(s) { return s.id !== editingSkillId; });
+      if (activeSkillId === editingSkillId) activeSkillId = "none";
+      editingSkillId = skillsCatalog[1] ? skillsCatalog[1].id : "none";
+      saveSkillsToStorage();
+      renderSkillSelectorDropdown();
+      renderSkillsModalList();
+      populateSkillEditorFields(editingSkillId);
+    };
+
+    // =========================================================================
+    // 0.2 INPUT BOX HEIGHT RESIZING (DRAG HANDLE + EXPAND BUTTON + AUTO-GROW)
+    // =========================================================================
+    var manualInputHeight = null;
+    var isInputExpanded = false;
+
+    window.autoAdjustInputHeight = function(el) {
+      if (manualInputHeight !== null || isInputExpanded) return;
+      el.style.height = "auto";
+      var nextH = Math.min(Math.max(el.scrollHeight, 44), 160);
+      el.style.height = nextH + "px";
+    };
+
+    window.toggleInputHeightExpand = function() {
+      var area = document.getElementById("promptInput");
+      var btn = document.getElementById("expandInputBtn");
+      if (!area) return;
+      isInputExpanded = !isInputExpanded;
+      if (isInputExpanded) {
+        manualInputHeight = 180;
+        area.style.height = "180px";
+        if (btn) btn.textContent = "⤡";
+      } else {
+        manualInputHeight = null;
+        area.style.height = "44px";
+        if (btn) btn.textContent = "⤢";
+      }
+    };
+
+    function initInputResizeDrag() {
+      var handle = document.getElementById("inputResizeHandle");
+      var area = document.getElementById("promptInput");
+      if (!handle || !area) return;
+
+      var startY = 0;
+      var startH = 44;
+      var dragging = false;
+
+      function onMove(clientY) {
+        if (!dragging) return;
+        var delta = startY - clientY; // dragging up increases height
+        var newH = Math.min(Math.max(startH + delta, 38), 320);
+        manualInputHeight = newH;
+        area.style.height = newH + "px";
+      }
+
+      function onEnd() {
+        if (!dragging) return;
+        dragging = false;
+        handle.classList.remove("dragging");
+        document.removeEventListener("mousemove", onMouseMove);
+        document.removeEventListener("mouseup", onEnd);
+      }
+
+      function onMouseMove(e) {
+        onMove(e.clientY);
+      }
+
+      handle.addEventListener("mousedown", function(e) {
+        e.preventDefault();
+        dragging = true;
+        startY = e.clientY;
+        startH = area.offsetHeight;
+        handle.classList.add("dragging");
+        document.addEventListener("mousemove", onMouseMove);
+        document.addEventListener("mouseup", onEnd);
+      });
+
+      handle.addEventListener("touchstart", function(e) {
+        if (!e.touches || !e.touches[0]) return;
+        dragging = true;
+        startY = e.touches[0].clientY;
+        startH = area.offsetHeight;
+        handle.classList.add("dragging");
+      }, { passive: true });
+
+      document.addEventListener("touchmove", function(e) {
+        if (dragging && e.touches && e.touches[0]) {
+          onMove(e.touches[0].clientY);
+        }
+      }, { passive: true });
+
+      document.addEventListener("touchend", onEnd);
+    }
+
     // =========================================================================
     // 1. STATE & AUTOMATIC SELECTION DETECTION IN WORD
     // =========================================================================
@@ -728,19 +1212,22 @@
     var trackChangesOn = true;
     var activeSelectionText = "";
 
-    window.addEventListener("DOMContentLoaded", () => {
-      const savedKey = safeStorage.get("word_ai_gemini_key");
+    window.addEventListener("DOMContentLoaded", function() {
+      var savedKey = safeStorage.get("word_ai_gemini_key");
       if (savedKey) document.getElementById("apiKeyInput").value = savedKey;
 
-      const savedModel = safeStorage.get("word_ai_gemini_model");
+      var savedModel = safeStorage.get("word_ai_gemini_model");
       if (savedModel) {
-        const sel = document.getElementById("modelSelect");
-        if ([...sel.options].some(o => o.value === savedModel)) sel.value = savedModel;
+        var sel = document.getElementById("modelSelect");
+        if ([...sel.options].some(function(o) { return o.value === savedModel; })) sel.value = savedModel;
       }
 
-      setTimeout(() => {
+      loadSkillsFromStorage();
+      initInputResizeDrag();
+
+      setTimeout(function() {
         if (!isWordHost) {
-          const txt = document.getElementById("wordStatusText");
+          var txt = document.getElementById("wordStatusText");
           if (txt && txt.textContent === "Ulanmoqda...") setStandaloneStatus();
         }
       }, 1500);
@@ -748,8 +1235,8 @@
 
     function onWordReady() {
       isWordHost = true;
-      const dot = document.getElementById("wordStatusDot");
-      const txt = document.getElementById("wordStatusText");
+      var dot = document.getElementById("wordStatusDot");
+      var txt = document.getElementById("wordStatusText");
       if (dot) dot.classList.remove("offline");
       if (txt) txt.textContent = "Word ulangan";
 
@@ -767,9 +1254,8 @@
       checkSelectionInWord();
     }
 
-    // Support both Office.initialize (Word 2016/2019/2021) and Office.onReady (Modern Word 365)
     if (typeof Office !== "undefined") {
-      Office.initialize = function (reason) {
+      Office.initialize = function () {
         onWordReady();
       };
       if (Office.onReady) {
@@ -786,11 +1272,12 @@
     }
 
     function setStandaloneStatus() {
-      document.getElementById("wordStatusDot").classList.add("offline");
-      document.getElementById("wordStatusText").textContent = "Brauzer";
+      var dot = document.getElementById("wordStatusDot");
+      var txt = document.getElementById("wordStatusText");
+      if (dot) dot.classList.add("offline");
+      if (txt) txt.textContent = "Brauzer";
     }
 
-    // Automatically updates scope: if text is highlighted -> Selection; otherwise -> Whole Document
     async function checkSelectionInWord() {
       if (!isWordHost) return;
       try {
@@ -808,11 +1295,12 @@
 
     function updateAutoScopeUI(selText) {
       const ind = document.getElementById("scopeIndicator");
+      if (!ind) return;
       if (selText && selText.length > 0) {
         const words = selText.split(/\s+/).length;
-        const snippet = selText.length > 26 ? selText.slice(0, 26) + "…" : selText;
+        const snippet = selText.length > 20 ? selText.slice(0, 20) + "…" : selText;
         ind.className = "scope-indicator is-selection";
-        ind.innerHTML = `✨ Tanlangan (${words} soʻz): "${escapeHtml(snippet)}"`;
+        ind.innerHTML = `✨ Tanlangan (${words}): "${escapeHtml(snippet)}"`;
       } else {
         ind.className = "scope-indicator";
         ind.innerHTML = `📄 Avto: <strong>Butun hujjat</strong>`;
@@ -897,11 +1385,12 @@
     }
 
     // =========================================================================
-    // 3. GEMINI API CLIENT
+    // 3. GEMINI API CLIENT (WITH AUTOMATIC SKILL INJECTION)
     // =========================================================================
     async function callGemini(promptText, systemInstruction) {
       const apiKey = document.getElementById("apiKeyInput").value.trim();
       const preferredModel = document.getElementById("modelSelect").value;
+      const finalSystemInstruction = buildSystemInstructionWithSkills(systemInstruction);
 
       const candidateModels = [
         preferredModel,
@@ -920,7 +1409,7 @@
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
-              systemInstruction: { parts: [{ text: systemInstruction }] },
+              systemInstruction: { parts: [{ text: finalSystemInstruction }] },
               contents: [{ role: "user", parts: [{ text: promptText }] }],
               generationConfig: { temperature: 0.2 }
             })
@@ -962,7 +1451,6 @@
               : Word.ChangeTrackingMode.off;
           }
 
-          // Check live selection in Word right now
           const selection = context.document.getSelection();
           selection.load("text");
           await context.sync();
@@ -970,7 +1458,7 @@
           const selText = (selection.text || "").trim();
           updateAutoScopeUI(selText);
 
-          // AUTOMATIC RULE: If user highlighted text -> translate ONLY selection; otherwise -> Whole Document
+          // AUTOMATIC: If user highlighted text -> translate ONLY selection; otherwise -> Whole Document
           if (selText.length > 0) {
             appendUserMsg(`Belgilangan qismni (${selText.split(/\s+/).length} soʻz) ${targetLanguage} tiliga tarjima qilish`);
 
@@ -994,7 +1482,7 @@
               replaceLoadingMsg(
                 loadId,
                 `✅ <strong>Belgilangan qism</strong> ${targetLanguage} tiliga tarjima qilindi.<div class="status-badge">✓ Wordga yozildi</div>`,
-                res.modelUsed
+                getMetaWithSkill(res.modelUsed)
               );
               return;
             }
@@ -1004,7 +1492,7 @@
               replaceLoadingMsg(
                 loadId,
                 `✅ <strong>Belgilangan qism (${count} ta abzas)</strong> formatni saqlagan holda ${targetLanguage} tiliga oʻgirildi.<div class="status-badge">✓ Wordga yozildi</div>`,
-                document.getElementById("modelSelect").value
+                getMetaWithSkill(document.getElementById("modelSelect").value)
               );
             }
             return;
@@ -1021,7 +1509,7 @@
             replaceLoadingMsg(
               loadId,
               `✅ <strong>Butun hujjat (${count} ta abzas/qator)</strong> format va jadvallarni saqlagan holda ${targetLanguage} tiliga tarjima qilindi.<div class="status-badge">✓ Wordga yozildi</div>`,
-              document.getElementById("modelSelect").value
+              getMetaWithSkill(document.getElementById("modelSelect").value)
             );
           }
         });
@@ -1094,7 +1582,7 @@ Return ONLY a valid JSON array of strings of the exact same length (${batchTexts
     }
 
     // =========================================================================
-    // 5. QUICK AI ACTIONS & CUSTOM CHAT PROMPTS (AUTO SELECTION / WHOLE DOC)
+    // 5. QUICK AI ACTIONS & CUSTOM CHAT PROMPTS
     // =========================================================================
     async function executeAiAction(actionKey) {
       if (!isWordHost) {
@@ -1156,11 +1644,10 @@ Return ONLY a valid JSON array of strings of the exact same length (${batchTexts
               showApiError(loadId, res.error);
               return;
             }
-            replaceLoadingMsg(loadId, formatMarkdownToHtml(res.text), res.modelUsed);
+            replaceLoadingMsg(loadId, formatMarkdownToHtml(res.text), getMetaWithSkill(res.modelUsed));
             return;
           }
 
-          // Mutating action: Selection vs Whole Doc
           if (useSelection) {
             const res = await callGemini(
               selText,
@@ -1175,7 +1662,7 @@ Return ONLY a valid JSON array of strings of the exact same length (${batchTexts
             replaceLoadingMsg(
               loadId,
               `✅ Belgilangan qism yangilandi.<div class="status-badge">✓ Wordga yozildi</div>`,
-              res.modelUsed
+              getMetaWithSkill(res.modelUsed)
             );
           } else {
             const allParas = context.document.body.paragraphs;
@@ -1187,7 +1674,7 @@ Return ONLY a valid JSON array of strings of the exact same length (${batchTexts
               replaceLoadingMsg(
                 loadId,
                 `✅ Butun hujjat (${count} ta abzas) tahrirlandi.<div class="status-badge">✓ Wordga yozildi</div>`,
-                document.getElementById("modelSelect").value
+                getMetaWithSkill(document.getElementById("modelSelect").value)
               );
             }
           }
@@ -1254,6 +1741,9 @@ Return ONLY a valid JSON array of strings with the exact same length (${batchTex
       const userPrompt = input.value.trim();
       if (!userPrompt) return;
       input.value = "";
+      if (!isInputExpanded && manualInputHeight === null) {
+        input.style.height = "44px";
+      }
 
       appendUserMsg(userPrompt);
 
@@ -1294,13 +1784,7 @@ Return a valid JSON object with three keys:
 }
 Use "edit_document" whenever the user asks to translate, write, draft, edit, rewrite, change, or add text to the document. Use "chat_reply" when the user asks a question, summary, or analysis without modifying the document. Return ONLY valid JSON.`;
 
-          const fullInput = `Active Scope: ${useSelection ? 'Highlighted Selection Only' : 'Whole Document'}
-Content:
----
-${workingText || '(Empty Document)'}
----
-
-User Prompt: ${userPrompt}`;
+          const fullInput = `Active Scope: ${useSelection ? 'Highlighted Selection Only' : 'Whole Document'}\nContent:\n---\n${workingText || '(Empty Document)'}\n---\n\nUser Prompt: ${userPrompt}`;
           const res = await callGemini(fullInput, sysPrompt);
 
           if (!res.ok) {
@@ -1327,16 +1811,24 @@ User Prompt: ${userPrompt}`;
             replaceLoadingMsg(
               loadId,
               `${formatMarkdownToHtml(parsed.chat_message || "✅ Hujjat yangilandi.")}<div class="status-badge">✓ ${useSelection ? 'Belgilangan qismga' : 'Butun hujjatga'} yozildi</div>`,
-              res.modelUsed
+              getMetaWithSkill(res.modelUsed)
             );
           } else {
             const replyText = parsed ? (parsed.chat_message || parsed.document_text) : res.text;
-            replaceLoadingMsg(loadId, formatMarkdownToHtml(replyText), res.modelUsed);
+            replaceLoadingMsg(loadId, formatMarkdownToHtml(replyText), getMetaWithSkill(res.modelUsed));
           }
         });
       } catch (err) {
         replaceLoadingMsg(loadId, `❌ Xatolik: ${escapeHtml(err.message)}`, "Xatolik", true);
       }
+    }
+
+    function getMetaWithSkill(modelId) {
+      var activeSk = skillsCatalog.find(function(s) { return s.id === activeSkillId; });
+      if (activeSk && activeSk.id !== "none") {
+        return modelId + " • " + activeSk.name;
+      }
+      return modelId;
     }
 
     function showApiError(loadId, errMsg) {
@@ -1422,18 +1914,6 @@ User Prompt: ${userPrompt}`;
       `;
     }
 
-    function openSettings() {
-      document.getElementById("settingsModal").classList.add("open");
-    }
-    function closeSettings() {
-      document.getElementById("settingsModal").classList.remove("open");
-    }
-    function saveSettings() {
-      const key = document.getElementById("apiKeyInput").value.trim();
-      if (key) localStorage.setItem("word_ai_gemini_key", key);
-      closeSettings();
-      appendBotMsg("✅ API kalit va sozlamalar saqlandi.");
-    }
     function saveModelChoice() {
       const model = document.getElementById("modelSelect").value;
       safeStorage.set("word_ai_gemini_model", model);
