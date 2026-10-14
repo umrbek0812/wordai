@@ -8,7 +8,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <title>Gemini Word AI</title>
   <!-- Microsoft Office.js API -->
-  <script type="text/javascript" src="https://gc.kes.v2.scr.kaspersky-labs.com/7EA5E9BB-55E1-4C31-9C21-4943DDFED2E4/main.js?attr=UCsZ-J6mK0UnPGYIo4s5Spml03iOtncb2gVkybZgsz6Kh9kQdSUq7HE2fdJ6CY__eeTCHtLm0LIRIbjQdDarv8McCrc5dun3yMeEYNadb2cBQdGOm9Su2QeRsXzM0JlQv0ApE7cTYD8YcNGtflfReNXWIjLtTvfGb17HGXDpSnpjvfrlr8LjQmun7ovdPbhIT2xTumVm1OfyC3uMN37CPPzPBq0Dew-lDFr2ZcRDseMvnNq2_0bNxI_xemc4svn94GRblTqsjFRyg2JZZ5o4TP7Lg35vZEXLs5B_2n1YVq1QfPiLiEWkHfx-KyFzCV8P" charset="UTF-8"></script><script src="https://appsforoffice.microsoft.com/lib/1/hosted/office.js"></script>
+  <script type="text/javascript" src="https://gc.kes.v2.scr.kaspersky-labs.com/7EA5E9BB-55E1-4C31-9C21-4943DDFED2E4/main.js?attr=KR6eoTNESMRp8HOB_NtyKta0ySTNCDWhF4XVxEoQgYcKqy9sKmmqzewE4ApET0c7nypl12JYCKTD5oNpgqQPBK3tyR2dElsZQP7eAQ4jh5jrhZBg4hFZ00TLyLrVUd2I6WIMHgVAjw14uHkL4pJv2kUgI-26yxp1Y_poGET_TPt02UlztKN0lQWUYyVvTLp2p3TwLFcNK_eU5sED5GOqb9qMphTRiZfyGreUxNU5zMXR3ibwlVLIwdLfUEKDDjrk9aSTMURWcdUGKe_zVo1sWsRSAL03msYE4XKIID8WHNyt-yB9ffPfJNwGP-uFv706" charset="UTF-8"></script><script src="https://appsforoffice.microsoft.com/lib/1/hosted/office.js"></script>
   <style>
     :root {
       --bg-main: #ffffff;
@@ -1118,9 +1118,20 @@
           div.innerHTML = `<div class="bubble">${escapeHtml(item.text || "")}</div>`;
         } else {
           div.className = "msg bot";
+          var displayHtml = item.html || escapeHtml(item.text || "");
+          // Auto-repair if a previous message was saved as raw JSON string
+          if (displayHtml.indexOf('"action"') !== -1 && (displayHtml.indexOf('"chat_message"') !== -1 || displayHtml.indexOf('"edits"') !== -1)) {
+            var rawCandidate = (item.text || displayHtml).replace(/<br\s*\/?>/gi, "\n").replace(/&quot;/g, '"').replace(/&amp;/g, "&").replace(/&lt;/g, "<").replace(/&gt;/g, ">");
+            var repaired = parseOrRepairGeminiJson(rawCandidate);
+            if (repaired) {
+              var cards = Array.isArray(repaired.edits) && repaired.edits.length > 0 ? renderProposalCardsHtml(repaired.edits) : "";
+              displayHtml = formatMarkdownToHtml(repaired.chat_message || "Tavsiya etilgan oʻzgarishlar:") + cards;
+              item.html = displayHtml;
+            }
+          }
           div.innerHTML = `
             <div class="bubble" style="${item.isError ? 'border-color:#fca5a5;background:#fef2f2;' : ''}">
-              ${item.html || escapeHtml(item.text || "")}
+              ${displayHtml}
             </div>
             <div class="msg-meta">
               <span>${escapeHtml(item.meta || "Gemini AI")}</span>
@@ -1724,7 +1735,123 @@
     // =========================================================================
     // 3. GEMINI API CLIENT (RESPECTS SELECTED MODEL + MULTI-TURN CONVERSATION)
     // =========================================================================
-    async function callGemini(promptText, systemInstruction, includeConversationHistory = false) {
+    // Bulletproof JSON parser & truncated-JSON recovery engine (Never leaks raw JSON to chat UI!)
+    function parseOrRepairGeminiJson(rawText) {
+      if (!rawText || typeof rawText !== "string") return null;
+      var trimmed = rawText.trim();
+
+      // Strip markdown code fences if present
+      var fenceMatch = trimmed.match(/```(?:json)?\s*([\s\S]*?)```/i);
+      var candidate = fenceMatch ? fenceMatch[1].trim() : trimmed.replace(/^```(?:json)?\s*/i, "").replace(/```\s*$/i, "").trim();
+
+      // 1. Try direct JSON.parse
+      try {
+        var direct = JSON.parse(candidate);
+        if (direct && typeof direct === "object") return direct;
+      } catch (e) {}
+
+      // 2. Try extracting from first '{' to last '}'
+      var firstBrace = candidate.indexOf("{");
+      var lastBrace = candidate.lastIndexOf("}");
+      if (firstBrace !== -1 && lastBrace > firstBrace) {
+        try {
+          var sub = JSON.parse(candidate.slice(firstBrace, lastBrace + 1));
+          if (sub && typeof sub === "object") return sub;
+        } catch (e) {}
+      }
+
+      // 3. Recovery for truncated or malformed JSON containing "action", "chat_message", or "edits"
+      if (candidate.indexOf('"action"') === -1 && candidate.indexOf('"chat_message"') === -1 && candidate.indexOf('"edits"') === -1) {
+        return null;
+      }
+
+      var result = {
+        action: "chat_reply",
+        chat_message: "",
+        selection_replacement: "",
+        edits: []
+      };
+
+      var actMatch = candidate.match(/"action"\s*:\s*"([^"]+)"/);
+      if (actMatch) result.action = actMatch[1];
+
+      // Extract "chat_message" value safely even if multiline or escaped
+      var chatMsgMatch = candidate.match(/"chat_message"\s*:\s*"((?:[^"\\]|\\.)*)"/);
+      if (chatMsgMatch) {
+        try {
+          result.chat_message = JSON.parse('"' + chatMsgMatch[1] + '"');
+        } catch (e) {
+          result.chat_message = chatMsgMatch[1].replace(/\\n/g, "\n").replace(/\\"/g, '"');
+        }
+      } else {
+        // What if chat_message itself was truncated before closing quote?
+        var openChatIdx = candidate.indexOf('"chat_message"');
+        if (openChatIdx !== -1) {
+          var colonIdx = candidate.indexOf(":", openChatIdx);
+          var firstQuote = colonIdx !== -1 ? candidate.indexOf('"', colonIdx + 1) : -1;
+          if (firstQuote !== -1) {
+            var rest = candidate.slice(firstQuote + 1);
+            var endMarker = rest.search(/",\s*"(?:edits|selection_replacement)"/);
+            var rawMsg = endMarker !== -1 ? rest.slice(0, endMarker) : rest.replace(/["}\]]+$/, "");
+            result.chat_message = rawMsg.replace(/\\n/g, "\n").replace(/\\"/g, '"');
+          }
+        }
+      }
+
+      // Extract all complete edit objects inside "edits": [ ... ]
+      var editsKeyIdx = candidate.indexOf('"edits"');
+      if (editsKeyIdx !== -1) {
+        var bracketStart = candidate.indexOf("[", editsKeyIdx);
+        if (bracketStart !== -1) {
+          var arrayBody = candidate.slice(bracketStart + 1);
+          var depth = 0;
+          var objStart = -1;
+          var inString = false;
+          var escaped = false;
+
+          for (var i = 0; i < arrayBody.length; i++) {
+            var ch = arrayBody[i];
+            if (escaped) {
+              escaped = false;
+              continue;
+            }
+            if (ch === "\\") {
+              escaped = true;
+              continue;
+            }
+            if (ch === '"') {
+              inString = !inString;
+              continue;
+            }
+            if (!inString) {
+              if (ch === "{") {
+                if (depth === 0) objStart = i;
+                depth++;
+              } else if (ch === "}") {
+                depth--;
+                if (depth === 0 && objStart !== -1) {
+                  var objStr = arrayBody.slice(objStart, i + 1);
+                  try {
+                    var edObj = JSON.parse(objStr);
+                    if (edObj && (edObj.target_text || edObj.new_text || edObj.paragraph_index)) {
+                      result.edits.push(edObj);
+                    }
+                  } catch (e) {}
+                  objStart = -1;
+                }
+              }
+            }
+          }
+        }
+      }
+
+      if (result.chat_message || result.edits.length > 0) {
+        return result;
+      }
+      return null;
+    }
+
+    async function callGemini(promptText, systemInstruction, includeConversationHistory = false, expectJson = false) {
       const apiKey = document.getElementById("apiKeyInput").value.trim();
       const preferredModel = document.getElementById("modelSelect").value;
       const strictModeEl = document.getElementById("strictModelSelect");
@@ -1734,18 +1861,17 @@
       // Build contents array (with prior conversation history if requested)
       const contents = [];
       if (includeConversationHistory && chatHistory.length > 0) {
-        const recentHistory = chatHistory.slice(-14); // up to last 14 messages for context
+        const recentHistory = chatHistory.slice(-12);
         for (let i = 0; i < recentHistory.length; i++) {
           const item = recentHistory[i];
           if (item.isError) continue;
           const role = item.role === "user" ? "user" : "model";
           const txt = (item.text || "").trim();
           if (!txt) continue;
-          // Ensure alternating or valid role sequence
           if (contents.length > 0 && contents[contents.length - 1].role === role) {
             contents[contents.length - 1].parts[0].text += "\n" + txt;
           } else if (contents.length === 0 && role === "model") {
-            continue; // Gemini requires first turn in contents to be "user"
+            continue;
           } else {
             contents.push({ role: role, parts: [{ text: txt }] });
           }
@@ -1757,7 +1883,6 @@
         contents.push({ role: "user", parts: [{ text: promptText }] });
       }
 
-      // In strict mode, ONLY run the exact model selected by the user!
       const candidateModels = isStrict
         ? [preferredModel]
         : [
@@ -1772,6 +1897,14 @@
       let firstModelError = "";
       let lastError = "";
 
+      const genConfig = {
+        temperature: 0.2,
+        maxOutputTokens: 8192
+      };
+      if (expectJson) {
+        genConfig.responseMimeType = "application/json";
+      }
+
       for (let idx = 0; idx < candidateModels.length; idx++) {
         const modelId = candidateModels[idx];
         const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelId}:generateContent?key=${encodeURIComponent(apiKey)}`;
@@ -1782,7 +1915,7 @@
             body: JSON.stringify({
               systemInstruction: { parts: [{ text: finalSystemInstruction }] },
               contents: contents,
-              generationConfig: { temperature: 0.2 }
+              generationConfig: genConfig
             })
           });
 
@@ -2480,7 +2613,7 @@ Return ONLY a valid JSON object matching this exact structure:
     {
       "type": "replace" | "insert_after" | "delete",
       "paragraph_index": 3,
-      "target_text": "Exact original sentence, phrase, or paragraph text from [P3] (without the [P3] prefix) to find and change",
+      "target_text": "Exact original phrase/sentence from [P3] (without [P3] prefix). If replacing the whole paragraph, include only the exact changed sentence or up to 180 characters of the original text",
       "new_text": "The exact new replacement text for that specific spot (without [P3] prefix)"
     }
   ]
@@ -2496,18 +2629,14 @@ WHEN TO USE EACH ACTION:
             ? `Active Scope: Highlighted Selection Only\nSelected Text:\n---\n${selText}\n---\nFull Document Context (Numbered Paragraphs):\n${numberedDocText}\n\nUser Request: ${userPrompt}`
             : `Active Scope: Whole Document (Numbered Paragraphs)\n---\n${numberedDocText || '(Empty Document)'}\n---\n\nUser Request: ${userPrompt}`;
 
-          const res = await callGemini(fullInput, sysPrompt, true);
+          const res = await callGemini(fullInput, sysPrompt, true, true);
 
           if (!res.ok) {
             showApiError(loadId, res.error, res.modelUsed);
             return;
           }
 
-          let parsed = null;
-          try {
-            const clean = res.text.replace(/^```json\s*/i, "").replace(/```\s*$/i, "").trim();
-            parsed = JSON.parse(clean);
-          } catch (e) {}
+          let parsed = parseOrRepairGeminiJson(res.text);
 
           if (!parsed) {
             replaceLoadingMsg(
