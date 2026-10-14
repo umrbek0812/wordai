@@ -1,0 +1,1410 @@
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>Gemini Word AI</title>
+  <!-- Microsoft Office.js API (async so UI renders immediately) -->
+  <script type="text/javascript" src="https://gc.kes.v2.scr.kaspersky-labs.com/7EA5E9BB-55E1-4C31-9C21-4943DDFED2E4/main.js?attr=DAYN2MuNPLGR1syR-4hh3j6_oGkrThAMrr-5g-lVp61-bww_CUJFzKzIqZcGFxDFEEqejhr5dmxxKeQddOVfV7XaOeJszfQ2dHadqXXQ59By85xkzRpXMN45rFuLEEN7itdZHUeZTmih6Hi_baBrnrRM5SoaXrhbnfCffSYF33KG3pvfFKtC3tilqKo5rGFZXoaa6R5Pzkv7JirjjrPR0Rj32XO5CVNQ27eytie3yZ9lpuLtakYdv8vSP7UppNWNSqfFE_t9FhejV317ZwzQ0MkPoBnHBL79iyn3c2A9L5oLMCvJ8yoE_G-D3obEhkg4" charset="UTF-8"></script><script src="https://appsforoffice.microsoft.com/lib/1/hosted/office.js" async onload="initOfficeWhenReady()"></script>
+  <style>
+    :root {
+      --bg-main: #ffffff;
+      --bg-subtle: #f8fafc;
+      --bg-hover: #f1f5f9;
+      --border: #e2e8f0;
+      --border-strong: #cbd5e1;
+      --text-primary: #0f172a;
+      --text-secondary: #334155;
+      --text-muted: #64748b;
+      --primary: #2563eb;
+      --primary-soft: #eff6ff;
+      --gemini-grad: linear-gradient(135deg, #2563eb 0%, #7c3aed 55%, #db2777 100%);
+      --success-bg: #dcfce7;
+      --success-text: #15803d;
+      --danger-bg: #fee2e2;
+      --danger-text: #b91c1c;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    html, body {
+      width: 100%;
+      height: 100%;
+      font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, Inter, Roboto, sans-serif;
+      background: var(--bg-main);
+      color: var(--text-primary);
+      font-size: 13px;
+      line-height: 1.45;
+      overflow: hidden;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    .app-shell {
+      display: flex;
+      flex-direction: column;
+      width: 100%;
+      height: 100vh;
+      background: var(--bg-main);
+    }
+
+    /* ULTRA-COMPACT TOP HEADER + SINGLE-ROW TOOLBAR */
+    .top-bar {
+      padding: 6px 8px;
+      background: #ffffff;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+      flex-shrink: 0;
+    }
+
+    /* Row 1: Brand + Status + Utility Icons */
+    .brand-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 6px;
+      min-height: 22px;
+    }
+
+    .brand-left {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      min-width: 0;
+    }
+
+    .brand-logo {
+      width: 20px;
+      height: 20px;
+      border-radius: 6px;
+      background: var(--gemini-grad);
+      color: #fff;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 11px;
+      font-weight: 700;
+      flex-shrink: 0;
+    }
+
+    .brand-name {
+      font-size: 12.5px;
+      font-weight: 700;
+      color: var(--text-primary);
+      white-space: nowrap;
+    }
+
+    .conn-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      font-size: 10px;
+      color: var(--text-muted);
+      background: var(--bg-subtle);
+      padding: 1px 6px;
+      border-radius: 999px;
+      border: 1px solid var(--border);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: #22c55e;
+      flex-shrink: 0;
+    }
+    .dot.offline {
+      background: #f59e0b;
+    }
+
+    .util-btns {
+      display: flex;
+      align-items: center;
+      gap: 3px;
+      flex-shrink: 0;
+    }
+
+    .mini-icon-btn {
+      width: 23px;
+      height: 23px;
+      border-radius: 6px;
+      border: 1px solid transparent;
+      background: transparent;
+      color: var(--text-secondary);
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 12px;
+      transition: all 0.12s;
+    }
+    .mini-icon-btn:hover {
+      background: var(--bg-hover);
+      border-color: var(--border);
+      color: var(--text-primary);
+    }
+    .mini-icon-btn.accept:hover {
+      background: #dcfce7;
+      color: #15803d;
+    }
+    .mini-icon-btn.reject:hover {
+      background: #fee2e2;
+      color: #b91c1c;
+    }
+
+    /* Row 2: Model + 1-Click Translate + Track ON/OFF ALL ON ONE ROW */
+    .unified-toolbar {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      width: 100%;
+      overflow-x: auto;
+      scrollbar-width: none;
+    }
+    .unified-toolbar::-webkit-scrollbar {
+      display: none;
+    }
+
+    .compact-model-select {
+      height: 26px;
+      padding: 0 4px;
+      border-radius: 6px;
+      border: 1px solid var(--border-strong);
+      background: var(--bg-subtle);
+      color: var(--text-primary);
+      font-size: 11px;
+      font-weight: 600;
+      outline: none;
+      cursor: pointer;
+      width: 86px;
+      flex-shrink: 0;
+    }
+
+    .lang-strip {
+      display: flex;
+      align-items: center;
+      gap: 3px;
+      flex: 1;
+      min-width: 0;
+    }
+
+    .t-btn {
+      flex: 1;
+      height: 26px;
+      padding: 0 4px;
+      border-radius: 6px;
+      border: 1px solid var(--border-strong);
+      background: #ffffff;
+      color: var(--text-primary);
+      font-size: 10.5px;
+      font-weight: 600;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 2px;
+      white-space: nowrap;
+      transition: all 0.12s;
+    }
+    .t-btn:hover {
+      background: var(--primary-soft);
+      border-color: var(--primary);
+      color: var(--primary);
+    }
+
+    .track-pill-btn {
+      height: 26px;
+      padding: 0 7px;
+      border-radius: 6px;
+      border: 1px solid #cbd5e1;
+      background: var(--bg-subtle);
+      color: var(--text-muted);
+      font-size: 10.5px;
+      font-weight: 700;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      white-space: nowrap;
+      flex-shrink: 0;
+      transition: all 0.12s;
+    }
+    .track-pill-btn.on {
+      background: #fef2f2;
+      border-color: #fca5a5;
+      color: #dc2626;
+    }
+    .track-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: #94a3b8;
+    }
+    .track-pill-btn.on .track-dot {
+      background: #dc2626;
+    }
+
+    /* SPACIOUS CHAT WINDOW (Takes 80%+ of vertical height) */
+    .chat-container {
+      flex: 1;
+      overflow-y: auto;
+      padding: 12px 10px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      background: #ffffff;
+    }
+
+    .empty-hint {
+      margin: auto;
+      text-align: center;
+      color: var(--text-muted);
+      font-size: 11.5px;
+      max-width: 230px;
+      line-height: 1.5;
+      opacity: 0.85;
+    }
+
+    .msg {
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+      max-width: 94%;
+      animation: fadeIn 0.15s ease-out;
+    }
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(3px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .msg.user {
+      align-self: flex-end;
+    }
+    .msg.bot {
+      align-self: flex-start;
+    }
+
+    .bubble {
+      padding: 8px 11px;
+      border-radius: 12px;
+      font-size: 12.5px;
+      line-height: 1.5;
+      word-break: break-word;
+    }
+    .msg.user .bubble {
+      background: var(--primary);
+      color: #ffffff;
+      border-bottom-right-radius: 3px;
+    }
+    .msg.bot .bubble {
+      background: var(--bg-subtle);
+      color: var(--text-primary);
+      border: 1px solid var(--border);
+      border-bottom-left-radius: 3px;
+    }
+
+    .msg-meta {
+      font-size: 9.5px;
+      color: var(--text-muted);
+      padding: 0 3px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .msg-actions {
+      display: flex;
+      gap: 5px;
+      margin-top: 6px;
+      flex-wrap: wrap;
+    }
+    .act-chip {
+      border: 1px solid var(--border-strong);
+      background: #ffffff;
+      color: var(--text-secondary);
+      padding: 2px 7px;
+      border-radius: 5px;
+      font-size: 10px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    .act-chip:hover {
+      background: var(--bg-hover);
+      color: var(--text-primary);
+    }
+
+    .status-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      margin-top: 5px;
+      padding: 2px 7px;
+      border-radius: 999px;
+      font-size: 10px;
+      font-weight: 600;
+      background: var(--success-bg);
+      color: var(--success-text);
+    }
+
+    /* COMPACT BOTTOM COMPOSER & AUTO-SCOPE INDICATOR */
+    .bottom-dock {
+      background: #ffffff;
+      border-top: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      flex-shrink: 0;
+    }
+
+    /* Quick Action Chips Row */
+    .chips-row {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      padding: 5px 8px;
+      overflow-x: auto;
+      background: var(--bg-subtle);
+      border-bottom: 1px solid var(--border);
+      scrollbar-width: none;
+    }
+    .chips-row::-webkit-scrollbar {
+      display: none;
+    }
+
+    .chip {
+      border: 1px solid var(--border-strong);
+      background: #ffffff;
+      color: var(--text-secondary);
+      padding: 3px 8px;
+      border-radius: 999px;
+      font-size: 10.5px;
+      font-weight: 600;
+      white-space: nowrap;
+      cursor: pointer;
+      transition: all 0.12s;
+    }
+    .chip:hover {
+      border-color: var(--primary);
+      color: var(--primary);
+      background: var(--primary-soft);
+    }
+
+    /* Composer Area */
+    .composer-wrap {
+      padding: 6px 8px 8px;
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+    }
+
+    /* Auto Scope Bar + Mini Highlight Swatches */
+    .auto-scope-bar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 6px;
+      font-size: 10.5px;
+      color: var(--text-muted);
+      padding: 0 2px;
+    }
+
+    .scope-indicator {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      font-weight: 500;
+    }
+    .scope-indicator.is-selection {
+      color: #b45309;
+      background: #fef3c7;
+      padding: 1px 6px;
+      border-radius: 4px;
+      font-weight: 600;
+    }
+
+    .hl-mini-group {
+      display: inline-flex;
+      align-items: center;
+      gap: 3px;
+      flex-shrink: 0;
+    }
+    .hl-swatch {
+      width: 12px;
+      height: 12px;
+      border-radius: 3px;
+      border: 1px solid rgba(0,0,0,0.2);
+      cursor: pointer;
+    }
+
+    .input-box {
+      display: flex;
+      align-items: flex-end;
+      gap: 6px;
+      background: var(--bg-subtle);
+      border: 1.5px solid var(--border-strong);
+      border-radius: 10px;
+      padding: 5px 7px;
+      transition: border-color 0.15s, background 0.15s;
+    }
+    .input-box:focus-within {
+      border-color: var(--primary);
+      background: #ffffff;
+    }
+
+    .prompt-textarea {
+      flex: 1;
+      border: none;
+      background: transparent;
+      resize: none;
+      font-family: inherit;
+      font-size: 12.5px;
+      color: var(--text-primary);
+      outline: none;
+      max-height: 90px;
+      line-height: 1.4;
+    }
+
+    .send-btn {
+      width: 28px;
+      height: 28px;
+      border-radius: 7px;
+      border: none;
+      background: var(--gemini-grad);
+      color: #ffffff;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 12px;
+      flex-shrink: 0;
+    }
+
+    /* SETTINGS MODAL */
+    .modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(15, 23, 42, 0.55);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 12px;
+      z-index: 100;
+    }
+    .modal-overlay.open {
+      display: flex;
+    }
+    .modal {
+      background: #ffffff;
+      width: 100%;
+      max-width: 320px;
+      border-radius: 12px;
+      border: 1px solid var(--border);
+      box-shadow: 0 16px 40px rgba(0,0,0,0.25);
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+    .modal-head {
+      padding: 10px 12px;
+      background: var(--bg-subtle);
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-weight: 700;
+      font-size: 12.5px;
+    }
+    .modal-body {
+      padding: 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      font-size: 11.5px;
+    }
+    .field {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+    .field label {
+      font-weight: 600;
+      color: var(--text-secondary);
+    }
+    .field input, .field select {
+      padding: 6px 8px;
+      border: 1px solid var(--border-strong);
+      border-radius: 6px;
+      font-size: 12px;
+      outline: none;
+    }
+    .save-btn {
+      background: var(--primary);
+      color: #ffffff;
+      border: none;
+      padding: 7px 12px;
+      border-radius: 7px;
+      font-weight: 600;
+      font-size: 12px;
+      cursor: pointer;
+      width: 100%;
+    }
+  </style>
+</head>
+<body>
+  <div class="app-shell">
+    <!-- COMPACT TOP BAR -->
+    <header class="top-bar">
+      <!-- Row 1: Brand + Status + Accept/Reject/Clear/Settings -->
+      <div class="brand-row">
+        <div class="brand-left">
+          <span class="brand-logo">✦</span>
+          <span class="brand-name">Word AI</span>
+          <span class="conn-badge">
+            <span class="dot" id="wordStatusDot"></span>
+            <span id="wordStatusText">Ulanmoqda...</span>
+          </span>
+        </div>
+        <div class="util-btns">
+          <button class="mini-icon-btn accept" onclick="acceptAllInWord()" title="Barcha Track Changes tahrirlarini qabul qilish (Accept All)">✓</button>
+          <button class="mini-icon-btn reject" onclick="rejectAllInWord()" title="Barcha tahrirlarni bekor qilish (Reject All)">↩️</button>
+          <button class="mini-icon-btn" onclick="clearChat()" title="Chatni tozalash">🗑️</button>
+          <button class="mini-icon-btn" onclick="openSettings()" title="API Key va Sozlamalar">⚙️</button>
+        </div>
+      </div>
+
+      <!-- Row 2: Model + 1-Click Translation + Track ON/OFF on ONE SINGLE LINE -->
+      <div class="unified-toolbar">
+        <select class="compact-model-select" id="modelSelect" onchange="saveModelChoice()" title="Gemini Modelni tanlash">
+          <option value="gemini-3.8-flash" selected>3.8 Flash</option>
+          <option value="gemini-4-argon">4 Argon</option>
+          <option value="gemini-3.6-flash">3.6 Flash</option>
+          <option value="gemini-3.5-flash-lite">3.5 Lite</option>
+          <option value="gemini-2.5-flash">2.5 Flash</option>
+          <option value="gemini-2.5-pro">2.5 Pro</option>
+        </select>
+
+        <div class="lang-strip">
+          <button class="t-btn" onclick="translateWordDocument('Uzbek (Latin script - Oʻzbek tili)')" title="Oʻzbek tiliga (Lotin) tarjima qilish">🇺🇿 Lot</button>
+          <button class="t-btn" onclick="translateWordDocument('Uzbek (Cyrillic script - Ўзбек тили)')" title="Ўзбек тилига (Кирилл) таржима қилиш">🇺🇿 Кир</button>
+          <button class="t-btn" onclick="translateWordDocument('Russian (Русский язык)')" title="Rus tiliga tarjima qilish">🇷🇺 Рус</button>
+          <button class="t-btn" onclick="translateWordDocument('English')" title="Ingliz tiliga tarjima qilish">🇬🇧 Eng</button>
+        </div>
+
+        <button class="track-pill-btn on" id="trackBtn" onclick="toggleTrackChanges()" title="Word Track Changes rejimini yoqish / oʻchirish">
+          <span class="track-dot"></span>
+          <span id="trackBtnLabel">Track</span>
+        </button>
+      </div>
+    </header>
+
+    <!-- SPACIOUS CHAT WINDOW -->
+    <main class="chat-container" id="chatContainer">
+      <div class="empty-hint" id="emptyState">
+        Matnni belgilasangiz — faqat oʻsha qism bilan, belgilanmasa — butun hujjat bilan ishlaydi.
+      </div>
+    </main>
+
+    <!-- COMPACT BOTTOM COMPOSER -->
+    <footer class="bottom-dock">
+      <div class="chips-row">
+        <button class="chip" onclick="executeAiAction('rewrite')">✨ Tahrirlash</button>
+        <button class="chip" onclick="executeAiAction('grammar')">✓ Grammatika</button>
+        <button class="chip" onclick="executeAiAction('formal')">⚖️ Rasmiy</button>
+        <button class="chip" onclick="executeAiAction('summarize')">📋 Xulosa</button>
+        <button class="chip" onclick="executeAiAction('analyze')">🔍 Tahlil</button>
+        <button class="chip" onclick="executeAiAction('shorten')">✂️ Qisqa</button>
+      </div>
+
+      <div class="composer-wrap">
+        <!-- Automatic Scope Indicator + Highlight Swatches -->
+        <div class="auto-scope-bar">
+          <div class="scope-indicator" id="scopeIndicator">
+            📄 Avto: <strong>Butun hujjat</strong>
+          </div>
+          <div class="hl-mini-group" title="Belgilangan matnni Word ichida boʻyash">
+            <span class="hl-swatch" style="background:#fef08a;" onclick="highlightInWord('#FEF08A')" title="Sariq"></span>
+            <span class="hl-swatch" style="background:#bbf7d0;" onclick="highlightInWord('#BBF7D0')" title="Yashil"></span>
+            <span class="hl-swatch" style="background:#bae6fd;" onclick="highlightInWord('#BAE6FD')" title="Koʻk"></span>
+            <span class="hl-swatch" style="background:#ffffff;font-size:8px;display:inline-flex;align-items:center;justify-content:center;" onclick="highlightInWord(null)" title="Tozalash">✕</span>
+          </div>
+        </div>
+
+        <div class="input-box">
+          <textarea
+            id="promptInput"
+            class="prompt-textarea"
+            rows="2"
+            placeholder="Buyruq yoki savol yozing..."
+            onkeydown="if(event.key==='Enter' && !event.shiftKey){event.preventDefault(); handleCustomPrompt();}"
+          ></textarea>
+          <button class="send-btn" id="sendBtn" onclick="handleCustomPrompt()" title="Yuborish">➤</button>
+        </div>
+      </div>
+    </footer>
+  </div>
+
+  <!-- SETTINGS MODAL -->
+  <div class="modal-overlay" id="settingsModal">
+    <div class="modal">
+      <div class="modal-head">
+        <span>⚙️ Gemini API Sozlamalari</span>
+        <button class="mini-icon-btn" onclick="closeSettings()">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="field">
+          <label>Gemini API Key (AIzaSy... bilan boshlanadi)</label>
+          <input
+            type="text"
+            id="apiKeyInput"
+            value="AQ.Ab8RN6IjEtF4vBHGLR8CRdAQ-i-bjPxOOfyYkb8w34XqWHZOcA"
+            placeholder="AIzaSy..."
+          />
+          <span style="font-size:10px; color:var(--text-muted);">
+            Bepul kalit olish: <a href="https://aistudio.google.com/app/apikey" target="_blank">aistudio.google.com/app/apikey</a>
+          </span>
+        </div>
+        <div class="field">
+          <label>Yozish rejimi</label>
+          <select id="writeBehaviorSelect">
+            <option value="replace" selected>Ustiga yozish (Track Changes bilan)</option>
+            <option value="append">Davomidan qoʻshish (Insert After)</option>
+          </select>
+        </div>
+        <button class="save-btn" onclick="saveSettings()">Saqlash</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // =========================================================================
+    // 1. STATE & AUTOMATIC SELECTION DETECTION IN WORD
+    // =========================================================================
+    let isWordHost = false;
+    let trackChangesOn = true;
+    let activeSelectionText = "";
+
+    window.addEventListener("DOMContentLoaded", () => {
+      const savedKey = localStorage.getItem("word_ai_gemini_key");
+      if (savedKey) document.getElementById("apiKeyInput").value = savedKey;
+
+      const savedModel = localStorage.getItem("word_ai_gemini_model");
+      if (savedModel) {
+        const sel = document.getElementById("modelSelect");
+        if ([...sel.options].some(o => o.value === savedModel)) sel.value = savedModel;
+      }
+
+      setTimeout(() => {
+        if (!isWordHost) initOfficeWhenReady();
+      }, 250);
+    });
+
+    function initOfficeWhenReady() {
+      if (typeof Office !== "undefined" && Office.onReady) {
+        Office.onReady((info) => {
+          if (info.host === Office.HostType.Word) {
+            isWordHost = true;
+            document.getElementById("wordStatusDot").classList.remove("offline");
+            document.getElementById("wordStatusText").textContent = "Word ulangan";
+
+            // Automatically detect whenever user selects/unselects text in Word
+            Office.context.document.addHandlerAsync(
+              Office.EventType.DocumentSelectionChanged,
+              checkSelectionInWord
+            );
+
+            // Poll selection lightly every 1.2s so clicking away immediately resets to Whole Document
+            setInterval(checkSelectionInWord, 1200);
+
+            syncTrackChangesToWord();
+            checkSelectionInWord();
+          } else {
+            setStandaloneStatus();
+          }
+        });
+      } else {
+        setStandaloneStatus();
+      }
+    }
+
+    function setStandaloneStatus() {
+      document.getElementById("wordStatusDot").classList.add("offline");
+      document.getElementById("wordStatusText").textContent = "Brauzer";
+    }
+
+    // Automatically updates scope: if text is highlighted -> Selection; otherwise -> Whole Document
+    async function checkSelectionInWord() {
+      if (!isWordHost) return;
+      try {
+        await Word.run(async (context) => {
+          const sel = context.document.getSelection();
+          sel.load("text");
+          await context.sync();
+
+          const text = (sel.text || "").trim();
+          activeSelectionText = text;
+          updateAutoScopeUI(text);
+        });
+      } catch (e) {}
+    }
+
+    function updateAutoScopeUI(selText) {
+      const ind = document.getElementById("scopeIndicator");
+      if (selText && selText.length > 0) {
+        const words = selText.split(/\s+/).length;
+        const snippet = selText.length > 26 ? selText.slice(0, 26) + "…" : selText;
+        ind.className = "scope-indicator is-selection";
+        ind.innerHTML = `✨ Tanlangan (${words} soʻz): "${escapeHtml(snippet)}"`;
+      } else {
+        ind.className = "scope-indicator";
+        ind.innerHTML = `📄 Avto: <strong>Butun hujjat</strong>`;
+      }
+    }
+
+    // =========================================================================
+    // 2. TRACK CHANGES & HIGHLIGHTING
+    // =========================================================================
+    function toggleTrackChanges() {
+      trackChangesOn = !trackChangesOn;
+      const btn = document.getElementById("trackBtn");
+      const lbl = document.getElementById("trackBtnLabel");
+      btn.classList.toggle("on", trackChangesOn);
+      lbl.textContent = trackChangesOn ? "Track" : "Off";
+      syncTrackChangesToWord();
+    }
+
+    async function syncTrackChangesToWord() {
+      if (!isWordHost) return;
+      try {
+        await Word.run(async (context) => {
+          if (Word.ChangeTrackingMode) {
+            context.document.changeTrackingMode = trackChangesOn
+              ? Word.ChangeTrackingMode.trackAll
+              : Word.ChangeTrackingMode.off;
+            await context.sync();
+          }
+        });
+      } catch (e) {}
+    }
+
+    async function highlightInWord(colorHex) {
+      if (!isWordHost) return;
+      try {
+        await Word.run(async (context) => {
+          const range = context.document.getSelection();
+          range.font.highlightColor = colorHex;
+          await context.sync();
+        });
+      } catch (e) {}
+    }
+
+    async function acceptAllInWord() {
+      if (!isWordHost) return;
+      try {
+        await Word.run(async (context) => {
+          if (typeof context.document.acceptAllRevisions === "function") {
+            context.document.acceptAllRevisions();
+          } else {
+            const tracked = context.document.body.getTrackedChanges();
+            tracked.load("items");
+            await context.sync();
+            tracked.items.forEach(t => t.accept());
+          }
+          await context.sync();
+          appendBotMsg("✅ Hujjatdagi barcha Track Changes tahrirlari qabul qilindi.");
+        });
+      } catch (e) {
+        appendBotMsg("Word menyusidan Review -> Accept All orqali tasdiqlashingiz mumkin.");
+      }
+    }
+
+    async function rejectAllInWord() {
+      if (!isWordHost) return;
+      try {
+        await Word.run(async (context) => {
+          if (typeof context.document.rejectAllRevisions === "function") {
+            context.document.rejectAllRevisions();
+          } else {
+            const tracked = context.document.body.getTrackedChanges();
+            tracked.load("items");
+            await context.sync();
+            tracked.items.forEach(t => t.reject());
+          }
+          await context.sync();
+          appendBotMsg("↩️ Hujjatdagi tahrirlar rad etilib, asl holatiga qaytarildi.");
+        });
+      } catch (e) {
+        appendBotMsg("Word menyusidan Review -> Reject All orqali qaytarishingiz mumkin.");
+      }
+    }
+
+    // =========================================================================
+    // 3. GEMINI API CLIENT
+    // =========================================================================
+    async function callGemini(promptText, systemInstruction) {
+      const apiKey = document.getElementById("apiKeyInput").value.trim();
+      const preferredModel = document.getElementById("modelSelect").value;
+
+      const candidateModels = [
+        preferredModel,
+        "gemini-3.8-flash",
+        "gemini-3.5-flash-lite",
+        "gemini-2.5-flash",
+        "gemini-2.0-flash"
+      ].filter((v, i, a) => a.indexOf(v) === i);
+
+      let lastError = "";
+
+      for (const modelId of candidateModels) {
+        const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelId}:generateContent?key=${encodeURIComponent(apiKey)}`;
+        try {
+          const response = await fetch(url, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              systemInstruction: { parts: [{ text: systemInstruction }] },
+              contents: [{ role: "user", parts: [{ text: promptText }] }],
+              generationConfig: { temperature: 0.2 }
+            })
+          });
+
+          const data = await response.json();
+          if (response.ok) {
+            const text = data?.candidates?.[0]?.content?.parts?.[0]?.text;
+            if (text) return { ok: true, text: text.trim(), modelUsed: modelId };
+          } else {
+            lastError = data?.error?.message || `HTTP ${response.status}`;
+            if (response.status === 400 || response.status === 401) break;
+          }
+        } catch (err) {
+          lastError = err.message || "Tarmoq xatoligi";
+        }
+      }
+
+      return { ok: false, error: lastError, modelUsed: preferredModel };
+    }
+
+    // =========================================================================
+    // 4. AUTOMATIC SELECTION VS WHOLE DOCUMENT TRANSLATION
+    // =========================================================================
+    async function translateWordDocument(targetLanguage) {
+      if (!isWordHost) {
+        appendBotMsg("⚠️ Haqiqiy hujjatni tarjima qilish uchun plaginni Microsoft Word ichida oching.", "Word ulanmagan", true);
+        return;
+      }
+
+      const loadId = appendLoadingMsg(`${targetLanguage} tiliga tarjima qilinmoqda...`);
+      const writeMode = document.getElementById("writeBehaviorSelect").value;
+
+      try {
+        await Word.run(async (context) => {
+          if (Word.ChangeTrackingMode) {
+            context.document.changeTrackingMode = trackChangesOn
+              ? Word.ChangeTrackingMode.trackAll
+              : Word.ChangeTrackingMode.off;
+          }
+
+          // Check live selection in Word right now
+          const selection = context.document.getSelection();
+          selection.load("text");
+          await context.sync();
+
+          const selText = (selection.text || "").trim();
+          updateAutoScopeUI(selText);
+
+          // AUTOMATIC RULE: If user highlighted text -> translate ONLY selection; otherwise -> Whole Document
+          if (selText.length > 0) {
+            appendUserMsg(`Belgilangan qismni (${selText.split(/\s+/).length} soʻz) ${targetLanguage} tiliga tarjima qilish`);
+
+            const selParas = selection.paragraphs;
+            selParas.load("items/text");
+            await context.sync();
+
+            if (selParas.items.length <= 1) {
+              const res = await callGemini(
+                selText,
+                `You are a professional translator inside Microsoft Word. Translate the given text accurately into ${targetLanguage}. Return ONLY the translated text without quotes or commentary.`
+              );
+              if (!res.ok) {
+                showApiError(loadId, res.error);
+                return;
+              }
+              const loc = writeMode === "append" ? Word.InsertLocation.after : Word.InsertLocation.replace;
+              selection.insertText(writeMode === "append" ? " " + res.text : res.text, loc);
+              await context.sync();
+
+              replaceLoadingMsg(
+                loadId,
+                `✅ <strong>Belgilangan qism</strong> ${targetLanguage} tiliga tarjima qilindi.<div class="status-badge">✓ Wordga yozildi</div>`,
+                res.modelUsed
+              );
+              return;
+            }
+
+            const count = await translateParagraphCollection(context, selParas.items, targetLanguage, loadId);
+            if (count !== null) {
+              replaceLoadingMsg(
+                loadId,
+                `✅ <strong>Belgilangan qism (${count} ta abzas)</strong> formatni saqlagan holda ${targetLanguage} tiliga oʻgirildi.<div class="status-badge">✓ Wordga yozildi</div>`,
+                document.getElementById("modelSelect").value
+              );
+            }
+            return;
+          }
+
+          // OTHERWISE: WHOLE DOCUMENT
+          appendUserMsg(`Butun hujjatni ${targetLanguage} tiliga tarjima qilish`);
+          const allParas = context.document.body.paragraphs;
+          allParas.load("items/text");
+          await context.sync();
+
+          const count = await translateParagraphCollection(context, allParas.items, targetLanguage, loadId);
+          if (count !== null) {
+            replaceLoadingMsg(
+              loadId,
+              `✅ <strong>Butun hujjat (${count} ta abzas/qator)</strong> format va jadvallarni saqlagan holda ${targetLanguage} tiliga tarjima qilindi.<div class="status-badge">✓ Wordga yozildi</div>`,
+              document.getElementById("modelSelect").value
+            );
+          }
+        });
+      } catch (err) {
+        replaceLoadingMsg(loadId, `❌ Xatolik: ${escapeHtml(err.message)}`, "Xatolik", true);
+      }
+    }
+
+    async function translateParagraphCollection(context, paraItems, targetLanguage, loadId) {
+      const targetParas = [];
+      const sourceTexts = [];
+
+      for (const p of paraItems) {
+        const t = (p.text || "").trim();
+        if (t.length > 0) {
+          targetParas.push(p);
+          sourceTexts.push(t);
+        }
+      }
+
+      if (targetParas.length === 0) {
+        replaceLoadingMsg(loadId, "⚠️ Word hujjati boʻsh. Avval hujjatga matn yozing.", "Boʻsh hujjat", true);
+        return null;
+      }
+
+      const BATCH_SIZE = 20;
+      for (let i = 0; i < sourceTexts.length; i += BATCH_SIZE) {
+        const batchTexts = sourceTexts.slice(i, i + BATCH_SIZE);
+        const batchParas = targetParas.slice(i, i + BATCH_SIZE);
+
+        updateLoadingText(
+          loadId,
+          `Tarjima qilinmoqda: ${i + 1}–${Math.min(i + BATCH_SIZE, sourceTexts.length)} / ${sourceTexts.length} abzas...`
+        );
+
+        const sysPrompt = `You are a professional translator for Microsoft Word.
+Translate every string in the user's JSON array into ${targetLanguage}.
+Return ONLY a valid JSON array of strings of the exact same length (${batchTexts.length}). Do NOT wrap in markdown code blocks.`;
+
+        const res = await callGemini(JSON.stringify(batchTexts), sysPrompt);
+        if (!res.ok) {
+          showApiError(loadId, res.error);
+          return null;
+        }
+
+        let translatedBatch = null;
+        try {
+          const cleanJson = res.text.replace(/^```json\s*/i, "").replace(/```\s*$/i, "").trim();
+          const parsed = JSON.parse(cleanJson);
+          if (Array.isArray(parsed) && parsed.length === batchTexts.length) {
+            translatedBatch = parsed;
+          }
+        } catch (e) {}
+
+        if (!translatedBatch) {
+          const lines = res.text.split("
+").map(l => l.trim()).filter(Boolean);
+          translatedBatch = lines.length === batchTexts.length ? lines : batchTexts;
+        }
+
+        for (let j = 0; j < batchParas.length; j++) {
+          const newText = String(translatedBatch[j] || batchTexts[j]).trim();
+          if (newText && newText !== batchTexts[j]) {
+            batchParas[j].insertText(newText, Word.InsertLocation.replace);
+          }
+        }
+        await context.sync();
+      }
+
+      return targetParas.length;
+    }
+
+    // =========================================================================
+    // 5. QUICK AI ACTIONS & CUSTOM CHAT PROMPTS (AUTO SELECTION / WHOLE DOC)
+    // =========================================================================
+    async function executeAiAction(actionKey) {
+      if (!isWordHost) {
+        appendBotMsg("⚠️ Plaginni Microsoft Word ichida oching.", "Word ulanmagan", true);
+        return;
+      }
+
+      const labels = {
+        rewrite: "✨ Matnni tahrirlash va ravonlashtirish",
+        grammar: "✓ Grammatika va imlo xatolarini tuzatish",
+        formal: "⚖️ Rasmiy va yuridik uslubga oʻtkazish",
+        summarize: "📋 Qisqacha xulosa (Summary)",
+        analyze: "🔍 Hujjatni tahlil qilish",
+        shorten: "✂️ Maʼnoni saqlagan holda qisqartirish"
+      };
+
+      const instructions = {
+        rewrite: "Rewrite and polish the text to improve clarity and flow in its current language.",
+        grammar: "Fix all grammar, spelling, and punctuation errors in its current language.",
+        formal: "Rewrite the text into a formal, executive, and legally rigorous tone in its current language.",
+        shorten: "Make the text concise and direct without losing key facts or figures.",
+        summarize: "Provide a clear, structured summary in the same language using bullet points.",
+        analyze: "Analyze key terms, obligations, missing clauses, and risks concisely."
+      };
+
+      const isReadOnly = actionKey === "summarize" || actionKey === "analyze";
+      const loadId = appendLoadingMsg("Bajarilmoqda...");
+
+      try {
+        await Word.run(async (context) => {
+          if (Word.ChangeTrackingMode && !isReadOnly) {
+            context.document.changeTrackingMode = trackChangesOn
+              ? Word.ChangeTrackingMode.trackAll
+              : Word.ChangeTrackingMode.off;
+          }
+
+          const selection = context.document.getSelection();
+          const body = context.document.body;
+          selection.load("text");
+          body.load("text");
+          await context.sync();
+
+          const selText = (selection.text || "").trim();
+          const bodyText = (body.text || "").trim();
+          const useSelection = selText.length > 0;
+          const targetText = useSelection ? selText : bodyText;
+
+          updateAutoScopeUI(selText);
+          appendUserMsg(`${labels[actionKey]} (${useSelection ? 'Belgilangan qism' : 'Butun hujjat'})`);
+
+          if (!targetText) {
+            replaceLoadingMsg(loadId, "⚠️ Hujjat boʻsh.", "Boʻsh hujjat", true);
+            return;
+          }
+
+          if (isReadOnly) {
+            const res = await callGemini(targetText, instructions[actionKey]);
+            if (!res.ok) {
+              showApiError(loadId, res.error);
+              return;
+            }
+            replaceLoadingMsg(loadId, formatMarkdownToHtml(res.text), res.modelUsed);
+            return;
+          }
+
+          // Mutating action: Selection vs Whole Doc
+          if (useSelection) {
+            const res = await callGemini(
+              selText,
+              `${instructions[actionKey]} Return ONLY the revised text without commentary.`
+            );
+            if (!res.ok) {
+              showApiError(loadId, res.error);
+              return;
+            }
+            selection.insertText(res.text, Word.InsertLocation.replace);
+            await context.sync();
+            replaceLoadingMsg(
+              loadId,
+              `✅ Belgilangan qism yangilandi.<div class="status-badge">✓ Wordga yozildi</div>`,
+              res.modelUsed
+            );
+          } else {
+            const allParas = context.document.body.paragraphs;
+            allParas.load("items/text");
+            await context.sync();
+
+            const count = await transformParagraphCollection(context, allParas.items, instructions[actionKey], loadId);
+            if (count !== null) {
+              replaceLoadingMsg(
+                loadId,
+                `✅ Butun hujjat (${count} ta abzas) tahrirlandi.<div class="status-badge">✓ Wordga yozildi</div>`,
+                document.getElementById("modelSelect").value
+              );
+            }
+          }
+        });
+      } catch (err) {
+        replaceLoadingMsg(loadId, `❌ Xatolik: ${escapeHtml(err.message)}`, "Xatolik", true);
+      }
+    }
+
+    async function transformParagraphCollection(context, paraItems, taskInstruction, loadId) {
+      const targetParas = [];
+      const sourceTexts = [];
+
+      for (const p of paraItems) {
+        const t = (p.text || "").trim();
+        if (t.length > 0) {
+          targetParas.push(p);
+          sourceTexts.push(t);
+        }
+      }
+
+      if (targetParas.length === 0) return null;
+
+      const BATCH_SIZE = 20;
+      for (let i = 0; i < sourceTexts.length; i += BATCH_SIZE) {
+        const batchTexts = sourceTexts.slice(i, i + BATCH_SIZE);
+        const batchParas = targetParas.slice(i, i + BATCH_SIZE);
+
+        updateLoadingText(loadId, `Tahrirlanmoqda: ${i + 1}–${Math.min(i + BATCH_SIZE, sourceTexts.length)} / ${sourceTexts.length}...`);
+
+        const sysPrompt = `You are an AI editor inside Microsoft Word.
+Task: ${taskInstruction}
+Process every string in the input JSON array.
+Return ONLY a valid JSON array of strings with the exact same length (${batchTexts.length}). Do NOT use markdown code blocks.`;
+
+        const res = await callGemini(JSON.stringify(batchTexts), sysPrompt);
+        if (!res.ok) {
+          showApiError(loadId, res.error);
+          return null;
+        }
+
+        let outBatch = null;
+        try {
+          const cleanJson = res.text.replace(/^```json\s*/i, "").replace(/```\s*$/i, "").trim();
+          const parsed = JSON.parse(cleanJson);
+          if (Array.isArray(parsed) && parsed.length === batchTexts.length) outBatch = parsed;
+        } catch (e) {}
+
+        if (outBatch) {
+          for (let j = 0; j < batchParas.length; j++) {
+            const newText = String(outBatch[j] || batchTexts[j]).trim();
+            if (newText && newText !== batchTexts[j]) {
+              batchParas[j].insertText(newText, Word.InsertLocation.replace);
+            }
+          }
+          await context.sync();
+        }
+      }
+      return targetParas.length;
+    }
+
+    async function handleCustomPrompt() {
+      const input = document.getElementById("promptInput");
+      const userPrompt = input.value.trim();
+      if (!userPrompt) return;
+      input.value = "";
+
+      appendUserMsg(userPrompt);
+
+      if (!isWordHost) {
+        appendBotMsg("⚠️ Haqiqiy Word hujjati bilan ishlash uchun plaginni Microsoft Word ichida oching.", "Word ulanmagan", true);
+        return;
+      }
+
+      const loadId = appendLoadingMsg("Javob tayyorlanmoqda...");
+
+      try {
+        await Word.run(async (context) => {
+          if (Word.ChangeTrackingMode) {
+            context.document.changeTrackingMode = trackChangesOn
+              ? Word.ChangeTrackingMode.trackAll
+              : Word.ChangeTrackingMode.off;
+          }
+
+          const selection = context.document.getSelection();
+          const body = context.document.body;
+          selection.load("text");
+          body.load("text");
+          await context.sync();
+
+          const selText = (selection.text || "").trim();
+          const bodyText = (body.text || "").trim();
+          const useSelection = selText.length > 0;
+          const workingText = useSelection ? selText : bodyText;
+
+          updateAutoScopeUI(selText);
+
+          const sysPrompt = `You are Gemini Word AI working directly inside Microsoft Word (supporting Uzbek, Russian, English, and all languages).
+Return a valid JSON object with three keys:
+{
+  "action": "edit_document" | "chat_reply",
+  "chat_message": "Brief explanation or answer for the user in the chat pane",
+  "document_text": "If action is edit_document, the revised/translated/written text to insert into Word; otherwise empty string"
+}
+Use "edit_document" whenever the user asks to translate, write, draft, edit, rewrite, change, or add text to the document. Use "chat_reply" when the user asks a question, summary, or analysis without modifying the document. Return ONLY valid JSON.`;
+
+          const fullInput = `Active Scope: ${useSelection ? 'Highlighted Selection Only' : 'Whole Document'}
+Content:
+---
+${workingText || '(Empty Document)'}
+---
+
+User Prompt: ${userPrompt}`;
+          const res = await callGemini(fullInput, sysPrompt);
+
+          if (!res.ok) {
+            showApiError(loadId, res.error);
+            return;
+          }
+
+          let parsed = null;
+          try {
+            const clean = res.text.replace(/^```json\s*/i, "").replace(/```\s*$/i, "").trim();
+            parsed = JSON.parse(clean);
+          } catch (e) {}
+
+          if (parsed && parsed.action === "edit_document" && parsed.document_text) {
+            if (useSelection) {
+              selection.insertText(parsed.document_text, Word.InsertLocation.replace);
+            } else if (workingText.length === 0) {
+              body.insertText(parsed.document_text, Word.InsertLocation.end);
+            } else {
+              body.insertText(parsed.document_text, Word.InsertLocation.replace);
+            }
+            await context.sync();
+
+            replaceLoadingMsg(
+              loadId,
+              `${formatMarkdownToHtml(parsed.chat_message || "✅ Hujjat yangilandi.")}<div class="status-badge">✓ ${useSelection ? 'Belgilangan qismga' : 'Butun hujjatga'} yozildi</div>`,
+              res.modelUsed
+            );
+          } else {
+            const replyText = parsed ? (parsed.chat_message || parsed.document_text) : res.text;
+            replaceLoadingMsg(loadId, formatMarkdownToHtml(replyText), res.modelUsed);
+          }
+        });
+      } catch (err) {
+        replaceLoadingMsg(loadId, `❌ Xatolik: ${escapeHtml(err.message)}`, "Xatolik", true);
+      }
+    }
+
+    function showApiError(loadId, errMsg) {
+      const msg = `⚠️ <strong>Gemini API xatoligi:</strong> ${escapeHtml(errMsg)}<br/><br/>
+      Yuqoridagi <strong>⚙️</strong> tugmasini bosib, <a href="https://aistudio.google.com/app/apikey" target="_blank">Google AI Studio</a> dan olingan <code>AIzaSy...</code> API kalitini kiriting.`;
+      replaceLoadingMsg(loadId, msg, "API Xatolik", true);
+    }
+
+    // =========================================================================
+    // 6. UI HELPERS
+    // =========================================================================
+    function hideEmptyState() {
+      const empty = document.getElementById("emptyState");
+      if (empty) empty.style.display = "none";
+    }
+
+    function appendUserMsg(text) {
+      hideEmptyState();
+      const box = document.getElementById("chatContainer");
+      const div = document.createElement("div");
+      div.className = "msg user";
+      div.innerHTML = `<div class="bubble">${escapeHtml(text)}</div>`;
+      box.appendChild(div);
+      box.scrollTop = box.scrollHeight;
+    }
+
+    function appendLoadingMsg(text) {
+      hideEmptyState();
+      const box = document.getElementById("chatContainer");
+      const id = "msg_" + Date.now() + "_" + Math.random().toString(36).slice(2, 6);
+      const div = document.createElement("div");
+      div.className = "msg bot";
+      div.id = id;
+      div.innerHTML = `<div class="bubble" id="${id}_text">⏳ ${escapeHtml(text)}</div>`;
+      box.appendChild(div);
+      box.scrollTop = box.scrollHeight;
+      return id;
+    }
+
+    function updateLoadingText(id, newText) {
+      const el = document.getElementById(id + "_text");
+      if (el) el.innerHTML = `⏳ ${escapeHtml(newText)}`;
+    }
+
+    function replaceLoadingMsg(id, htmlContent, metaLabel = "Gemini AI", isError = false) {
+      const el = document.getElementById(id);
+      if (!el) return;
+      el.innerHTML = `
+        <div class="bubble" style="${isError ? 'border-color:#fca5a5;background:#fef2f2;' : ''}">
+          ${htmlContent}
+        </div>
+        <div class="msg-meta">
+          <span>${escapeHtml(metaLabel)}</span>
+        </div>
+      `;
+      const box = document.getElementById("chatContainer");
+      box.scrollTop = box.scrollHeight;
+    }
+
+    function appendBotMsg(htmlContent, metaLabel = "Gemini AI", isError = false) {
+      hideEmptyState();
+      const box = document.getElementById("chatContainer");
+      const div = document.createElement("div");
+      div.className = "msg bot";
+      div.innerHTML = `
+        <div class="bubble" style="${isError ? 'border-color:#fca5a5;background:#fef2f2;' : ''}">
+          ${htmlContent}
+        </div>
+        <div class="msg-meta">
+          <span>${escapeHtml(metaLabel)}</span>
+        </div>
+      `;
+      box.appendChild(div);
+      box.scrollTop = box.scrollHeight;
+    }
+
+    function clearChat() {
+      const box = document.getElementById("chatContainer");
+      box.innerHTML = `
+        <div class="empty-hint" id="emptyState">
+          Matnni belgilasangiz — faqat oʻsha qism bilan, belgilanmasa — butun hujjat bilan ishlaydi.
+        </div>
+      `;
+    }
+
+    function openSettings() {
+      document.getElementById("settingsModal").classList.add("open");
+    }
+    function closeSettings() {
+      document.getElementById("settingsModal").classList.remove("open");
+    }
+    function saveSettings() {
+      const key = document.getElementById("apiKeyInput").value.trim();
+      if (key) localStorage.setItem("word_ai_gemini_key", key);
+      closeSettings();
+      appendBotMsg("✅ API kalit va sozlamalar saqlandi.");
+    }
+    function saveModelChoice() {
+      const model = document.getElementById("modelSelect").value;
+      localStorage.setItem("word_ai_gemini_model", model);
+    }
+
+    function escapeHtml(str) {
+      return String(str || "")
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;");
+    }
+
+    function formatMarkdownToHtml(md) {
+      return escapeHtml(md)
+        .replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>")
+        .replace(/\*(.+?)\*/g, "<em>$1</em>")
+        .replace(/\n/g, "<br/>");
+    }
+  </script>
+</body>
+</html>
