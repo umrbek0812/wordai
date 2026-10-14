@@ -8,7 +8,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <title>Gemini Word AI</title>
   <!-- Microsoft Office.js API -->
-  <script type="text/javascript" src="https://gc.kes.v2.scr.kaspersky-labs.com/7EA5E9BB-55E1-4C31-9C21-4943DDFED2E4/main.js?attr=rEhd_jNwjE0-IolB4sqOJq56vOdBsS-WfDku17GRBj655LcELN0JMVYsAhh51xTDo9qt2xgIM4fAidusVM6u1TPY7SJpATPBREIuzUR2azUMth_89fQ0zz5RTIuOPOKItYxISMAwpluZYG1NxiLQMqYuy0njKfJTfEluZSc3JVlMtGqo4cPuD4H4weNHl-YgKW9huXMnwYgKRldS6tt2HyhHBAdDpe0scOv1SiyqcLeGquhOiIdkWjfC-ZPIx0BXbZbL7zvA6mMhTXBPMccbnwOpfhx9o5x7qBkk9pUXjGNdiQGs_yQqCj8z0dkNMhXL" charset="UTF-8"></script><script src="https://appsforoffice.microsoft.com/lib/1/hosted/office.js"></script>
+  <script type="text/javascript" src="https://gc.kes.v2.scr.kaspersky-labs.com/7EA5E9BB-55E1-4C31-9C21-4943DDFED2E4/main.js?attr=kAPkMzM7BVfPIS8avdL-XKSDEtVVU4uWu8OunacC6ud1KYy_YtqyRil742A0vGMR8sWOvRdsOaFfI9CNwex57X4KLRzlCCvsm-8S20YsdYuenG9uiFjz69gEb-nMngzWXvtSsm7hvbwDnRUDE8qIiB_OX1P6S2yn33PACzPoKsyksVDSVmTBfeU31HACgSSVtFpkgWMa6wS4rYxFrHLVQjf7ZYf4r8ejMEBAlFe0f5Q5TISNxSGl-VAOx9xj9AIwQhA_36HYVBbsCaIiZvhcIUA27qV8FtpqugWQOcph0HJ3noeIWrZP0pao_EDkCYQ1" charset="UTF-8"></script><script src="https://appsforoffice.microsoft.com/lib/1/hosted/office.js"></script>
   <style>
     :root {
       --bg-main: #ffffff;
@@ -26,6 +26,8 @@
       --gemini-grad: linear-gradient(135deg, #2563eb 0%, #7c3aed 55%, #db2777 100%);
       --success-bg: #dcfce7;
       --success-text: #15803d;
+      --warn-bg: #fef3c7;
+      --warn-text: #92400e;
       --danger-bg: #fee2e2;
       --danger-text: #b91c1c;
     }
@@ -198,11 +200,11 @@
       border: 1px solid var(--border-strong);
       background: var(--bg-subtle);
       color: var(--text-primary);
-      font-size: 11px;
+      font-size: 10.5px;
       font-weight: 600;
       outline: none;
       cursor: pointer;
-      width: 84px;
+      width: 96px;
       flex-shrink: 0;
     }
 
@@ -337,6 +339,7 @@
       display: flex;
       align-items: center;
       gap: 6px;
+      flex-wrap: wrap;
     }
 
     .status-badge {
@@ -352,6 +355,16 @@
       color: var(--success-text);
     }
 
+    .fallback-warn {
+      display: block;
+      margin-top: 5px;
+      padding: 3px 7px;
+      border-radius: 6px;
+      font-size: 10px;
+      background: var(--warn-bg);
+      color: var(--warn-text);
+    }
+
     /* COMPACT BOTTOM COMPOSER WITH DRAG-RESIZE HANDLE & SKILL SELECTOR */
     .bottom-dock {
       background: #ffffff;
@@ -361,7 +374,6 @@
       flex-shrink: 0;
     }
 
-    /* Drag Handle Bar to resize input height */
     .resize-handle {
       height: 7px;
       width: 100%;
@@ -387,7 +399,6 @@
       background: var(--primary);
     }
 
-    /* Quick Action Chips Row */
     .chips-row {
       display: flex;
       align-items: center;
@@ -420,7 +431,6 @@
       background: var(--primary-soft);
     }
 
-    /* Composer Area */
     .composer-wrap {
       padding: 5px 8px 8px;
       display: flex;
@@ -428,7 +438,6 @@
       gap: 5px;
     }
 
-    /* Auto Scope + Active Skill Selector Bar */
     .auto-scope-bar {
       display: flex;
       align-items: center;
@@ -567,7 +576,7 @@
       flex-shrink: 0;
     }
 
-    /* MODALS (SETTINGS & SKILLS MANAGER) */
+    /* MODALS */
     .modal-overlay {
       position: fixed;
       inset: 0;
@@ -650,7 +659,7 @@
       background: var(--bg-subtle);
       color: var(--text-secondary);
       border: 1px solid var(--border-strong);
-      padding: 6px 10px;
+      padding: 5px 9px;
       border-radius: 6px;
       font-weight: 600;
       font-size: 11px;
@@ -670,7 +679,7 @@
       display: flex;
       flex-direction: column;
       gap: 6px;
-      max-height: 150px;
+      max-height: 140px;
       overflow-y: auto;
       border: 1px solid var(--border);
       border-radius: 7px;
@@ -711,7 +720,7 @@
         <div class="brand-left">
           <span class="brand-logo">✦</span>
           <span class="brand-name">Word AI</span>
-          <span class="conn-badge">
+          <span class="conn-badge" id="connBadge" title="Hujjat va yozishmalar holati">
             <span class="dot" id="wordStatusDot"></span>
             <span id="wordStatusText">Ulanmoqda...</span>
           </span>
@@ -720,18 +729,21 @@
           <button class="mini-icon-btn skill-btn" onclick="openSkillsModal()" title="Gemini Skills (Doimiy qoidalar va uslublar)">🧠 Skills</button>
           <button class="mini-icon-btn accept" onclick="acceptAllInWord()" title="Barcha Track Changes tahrirlarini qabul qilish">✓</button>
           <button class="mini-icon-btn reject" onclick="rejectAllInWord()" title="Barcha tahrirlarni bekor qilish">↩️</button>
-          <button class="mini-icon-btn" onclick="clearChat()" title="Chatni tozalash">🗑️</button>
-          <button class="mini-icon-btn" onclick="openSettings()" title="API Key va Sozlamalar">⚙️</button>
+          <button class="mini-icon-btn" onclick="clearChatWithConfirm()" title="Ushbu fayl boʻyicha chat tarixini tozalash">🗑️</button>
+          <button class="mini-icon-btn" onclick="openSettings()" title="API Key va Model Sozlamalari">⚙️</button>
         </div>
       </div>
 
       <!-- Row 2: Model + 1-Click Translation + Track ON/OFF on ONE SINGLE LINE -->
       <div class="unified-toolbar">
-        <select class="compact-model-select" id="modelSelect" onchange="saveModelChoice()" title="Gemini Modelni tanlash">
-          <option value="gemini-3.8-flash" selected>3.8 Flash</option>
-          <option value="gemini-4-argon">4 Argon</option>
+        <select class="compact-model-select" id="modelSelect" onchange="saveModelChoice()" title="Gemini Modelni tanlash (Kalitingizda mavjud modellar)">
+          <option value="gemini-3.8-flash">3.8 Flash</option>
           <option value="gemini-3.6-flash">3.6 Flash</option>
+          <option value="gemini-3-flash-preview">3 Flash</option>
+          <option value="gemini-3.1-pro-preview">3.1 Pro</option>
+          <option value="gemini-4-argon">4 Argon</option>
           <option value="gemini-3.5-flash-lite">3.5 Lite</option>
+          <option value="gemini-3.1-flash-lite">3.1 Lite</option>
           <option value="gemini-2.5-flash">2.5 Flash</option>
           <option value="gemini-2.5-pro">2.5 Pro</option>
         </select>
@@ -753,7 +765,8 @@
     <!-- SPACIOUS CHAT WINDOW -->
     <main class="chat-container" id="chatContainer">
       <div class="empty-hint" id="emptyState">
-        Matnni belgilasangiz — faqat oʻsha qism bilan, belgilanmasa — butun hujjat bilan ishlaydi.
+        Matnni belgilasangiz — faqat oʻsha qism bilan, belgilanmasa — butun hujjat bilan ishlaydi.<br/>
+        <span style="font-size:10.5px;opacity:0.8;">Ushbu fayldagi barcha yozishmalar avtomatik saqlanadi.</span>
       </div>
     </main>
 
@@ -815,22 +828,38 @@
   <div class="modal-overlay" id="settingsModal">
     <div class="modal">
       <div class="modal-head">
-        <span>⚙️ Gemini API Sozlamalari</span>
+        <span>⚙️ Gemini API va Model Sozlamalari</span>
         <button class="mini-icon-btn" onclick="closeSettings()">✕</button>
       </div>
       <div class="modal-body">
         <div class="field">
           <label>Gemini API Key (AIzaSy... bilan boshlanadi)</label>
-          <input
-            type="text"
-            id="apiKeyInput"
-            value="AQ.Ab8RN6IjEtF4vBHGLR8CRdAQ-i-bjPxOOfyYkb8w34XqWHZOcA"
-            placeholder="AIzaSy..."
-          />
-          <span style="font-size:10px; color:var(--text-muted);">
+          <div style="display:flex; gap:4px;">
+            <input
+              type="text"
+              id="apiKeyInput"
+              style="flex:1;"
+              value="AQ.Ab8RN6IjEtF4vBHGLR8CRdAQ-i-bjPxOOfyYkb8w34XqWHZOcA"
+              placeholder="AIzaSy..."
+            />
+            <button class="secondary-btn" onclick="syncModelsFromGoogle(true)" title="Kalitingizda ochiq boʻlgan modellarni Google serveridan tekshirish">🔄 Modellar</button>
+          </div>
+          <span style="font-size:10px; color:var(--text-muted);" id="modelSyncStatus">
             Bepul kalit olish: <a href="https://aistudio.google.com/app/apikey" target="_blank">aistudio.google.com/app/apikey</a>
           </span>
         </div>
+
+        <div class="field">
+          <label>Model ishlash rejimi</label>
+          <select id="strictModelSelect">
+            <option value="strict" selected>Faqat men tanlagan modelda javob bersin (Qatʼiy)</option>
+            <option value="fallback">Tanlangan modelda limit tugasa boshqa modelga oʻtsin (Avto-zaxira)</option>
+          </select>
+          <span style="font-size:10px; color:var(--text-muted);">
+            "Qatʼiy" rejimda faqat siz tepadan tanlagan model ishlatiladi va boshqa modelga oʻtib ketmaydi.
+          </span>
+        </div>
+
         <div class="field">
           <label>Yozish rejimi</label>
           <select id="writeBehaviorSelect">
@@ -892,13 +921,146 @@
 
   <script>
     // =========================================================================
-    // 0. SAFE STORAGE & DEFAULT GEMINI SKILLS
+    // 0. SAFE STORAGE & PER-DOCUMENT PERSISTENT CHAT HISTORY
     // =========================================================================
     const safeStorage = {
       get: function(k) { try { return localStorage.getItem(k); } catch(e) { return null; } },
-      set: function(k, v) { try { localStorage.setItem(k, v); } catch(e) {} }
+      set: function(k, v) { try { localStorage.setItem(k, v); } catch(e) {} },
+      remove: function(k) { try { localStorage.removeItem(k); } catch(e) {} }
     };
 
+    var currentDocId = "default_word_doc";
+    var chatHistory = []; // Array of { role: 'user'|'bot', text: '...', html: '...', meta: '...', isError: false, ts: number }
+
+    function hashString(str) {
+      var hash = 5381;
+      for (var i = 0; i < str.length; i++) {
+        hash = ((hash << 5) + hash) + str.charCodeAt(i);
+        hash = hash & hash;
+      }
+      return Math.abs(hash).toString(36);
+    }
+
+    // Resolve a persistent ID for the currently open Word document and load its saved chat history
+    function initDocumentChatPersistence() {
+      try {
+        if (isWordHost && typeof Office !== "undefined" && Office.context && Office.context.document) {
+          var docSettings = Office.context.document.settings;
+          var savedDocId = docSettings ? docSettings.get("word_ai_doc_id") : null;
+          var docUrl = Office.context.document.url || "";
+
+          if (savedDocId) {
+            currentDocId = savedDocId;
+          } else if (docUrl && docUrl.length > 0) {
+            currentDocId = "doc_" + hashString(docUrl);
+            if (docSettings) {
+              docSettings.set("word_ai_doc_id", currentDocId);
+              docSettings.saveAsync();
+            }
+          } else {
+            currentDocId = "doc_" + Date.now() + "_" + Math.random().toString(36).slice(2, 6);
+            if (docSettings) {
+              docSettings.set("word_ai_doc_id", currentDocId);
+              docSettings.saveAsync();
+            }
+          }
+
+          // Load history from Document Settings first, or fallback to localStorage for this docId
+          var embeddedHistoryRaw = docSettings ? docSettings.get("word_ai_chat_history") : null;
+          var localHistoryRaw = safeStorage.get("word_ai_chat_" + currentDocId);
+
+          var parsedEmbedded = null;
+          var parsedLocal = null;
+          try { if (embeddedHistoryRaw) parsedEmbedded = JSON.parse(embeddedHistoryRaw); } catch (e) {}
+          try { if (localHistoryRaw) parsedLocal = JSON.parse(localHistoryRaw); } catch (e) {}
+
+          if (Array.isArray(parsedLocal) && Array.isArray(parsedEmbedded)) {
+            chatHistory = parsedLocal.length >= parsedEmbedded.length ? parsedLocal : parsedEmbedded;
+          } else if (Array.isArray(parsedLocal)) {
+            chatHistory = parsedLocal;
+          } else if (Array.isArray(parsedEmbedded)) {
+            chatHistory = parsedEmbedded;
+          }
+        } else {
+          var browserRaw = safeStorage.get("word_ai_chat_" + currentDocId);
+          if (browserRaw) {
+            try { chatHistory = JSON.parse(browserRaw) || []; } catch (e) {}
+          }
+        }
+      } catch (e) {}
+
+      renderSavedChatHistory();
+    }
+
+    function persistChatHistory() {
+      // Keep last 50 messages per document so storage stays fast and clean
+      if (chatHistory.length > 50) {
+        chatHistory = chatHistory.slice(chatHistory.length - 50);
+      }
+      var serialized = JSON.stringify(chatHistory);
+      safeStorage.set("word_ai_chat_" + currentDocId, serialized);
+
+      try {
+        if (isWordHost && typeof Office !== "undefined" && Office.context && Office.context.document && Office.context.document.settings) {
+          Office.context.document.settings.set("word_ai_doc_id", currentDocId);
+          Office.context.document.settings.set("word_ai_chat_history", serialized);
+          Office.context.document.settings.saveAsync();
+        }
+      } catch (e) {}
+
+      updateStatusWithChatCount();
+    }
+
+    function renderSavedChatHistory() {
+      var box = document.getElementById("chatContainer");
+      if (!box) return;
+
+      if (!chatHistory || chatHistory.length === 0) {
+        box.innerHTML = `
+          <div class="empty-hint" id="emptyState">
+            Matnni belgilasangiz — faqat oʻsha qism bilan, belgilanmasa — butun hujjat bilan ishlaydi.<br/>
+            <span style="font-size:10.5px;opacity:0.8;">Ushbu fayldagi barcha yozishmalar avtomatik saqlanadi.</span>
+          </div>
+        `;
+        updateStatusWithChatCount();
+        return;
+      }
+
+      box.innerHTML = "";
+      chatHistory.forEach(function(item) {
+        var div = document.createElement("div");
+        if (item.role === "user") {
+          div.className = "msg user";
+          div.innerHTML = `<div class="bubble">${escapeHtml(item.text || "")}</div>`;
+        } else {
+          div.className = "msg bot";
+          div.innerHTML = `
+            <div class="bubble" style="${item.isError ? 'border-color:#fca5a5;background:#fef2f2;' : ''}">
+              ${item.html || escapeHtml(item.text || "")}
+            </div>
+            <div class="msg-meta">
+              <span>${escapeHtml(item.meta || "Gemini AI")}</span>
+            </div>
+          `;
+        }
+        box.appendChild(div);
+      });
+      box.scrollTop = box.scrollHeight;
+      updateStatusWithChatCount();
+    }
+
+    function updateStatusWithChatCount() {
+      var txt = document.getElementById("wordStatusText");
+      if (!txt) return;
+      var count = chatHistory.length;
+      if (isWordHost) {
+        txt.textContent = count > 0 ? ("Word • " + count + " xabar") : "Word ulangan";
+      }
+    }
+
+    // =========================================================================
+    // 0.1 GEMINI SKILLS SYSTEM
+    // =========================================================================
     const DEFAULT_SKILLS = [
       {
         id: "none",
@@ -937,9 +1099,7 @@
       if (raw) {
         try {
           var parsed = JSON.parse(raw);
-          if (Array.isArray(parsed) && parsed.length > 0) {
-            skillsCatalog = parsed;
-          }
+          if (Array.isArray(parsed) && parsed.length > 0) skillsCatalog = parsed;
         } catch (e) {}
       }
       if (!skillsCatalog || skillsCatalog.length === 0) {
@@ -983,7 +1143,6 @@
       saveSkillsToStorage();
     };
 
-    // Build combined system instruction with Active Skill + Global Rules
     function buildSystemInstructionWithSkills(baseInstruction) {
       var parts = [baseInstruction];
       if (globalCustomRules && globalCustomRules.trim()) {
@@ -997,7 +1156,7 @@
     }
 
     // =========================================================================
-    // 0.1 MODALS: SETTINGS & SKILLS MANAGER
+    // 0.2 MODALS: SETTINGS & LIVE GOOGLE MODELS SYNC
     // =========================================================================
     window.openSettings = function() {
       var m = document.getElementById("settingsModal");
@@ -1021,8 +1180,92 @@
         var key = inp.value.trim();
         if (key) safeStorage.set("word_ai_gemini_key", key);
       }
+      var strictSel = document.getElementById("strictModelSelect");
+      if (strictSel) {
+        safeStorage.set("word_ai_strict_model", strictSel.value);
+      }
       window.closeSettings();
-      if (typeof appendBotMsg === "function") appendBotMsg("✅ API kalit va sozlamalar saqlandi.");
+      syncModelsFromGoogle(false);
+      appendBotMsg("✅ API kalit va model sozlamalari saqlandi.");
+    };
+
+    // Fetch live models enabled on the user's Google AI Studio API Key
+    window.syncModelsFromGoogle = async function(showFeedback) {
+      var inp = document.getElementById("apiKeyInput");
+      var statusEl = document.getElementById("modelSyncStatus");
+      if (!inp) return;
+      var apiKey = inp.value.trim();
+      if (!apiKey || apiKey.startsWith("AQ.")) {
+        if (showFeedback && statusEl) {
+          statusEl.innerHTML = `<span style="color:#dc2626;">Avval AIzaSy... bilan boshlanuvchi kalitni kiriting.</span>`;
+        }
+        return;
+      }
+
+      if (showFeedback && statusEl) {
+        statusEl.textContent = "⏳ Google serveridan modellar tekshirilmoqda...";
+      }
+
+      try {
+        var res = await fetch("https://generativelanguage.googleapis.com/v1beta/models?key=" + encodeURIComponent(apiKey));
+        var data = await res.json();
+        if (!res.ok || !data.models) {
+          if (showFeedback && statusEl) {
+            statusEl.innerHTML = `<span style="color:#dc2626;">Xato: ${escapeHtml(data?.error?.message || "Kalit notoʻgʻri")}</span>`;
+          }
+          return;
+        }
+
+        // Filter generative text/multimodal models
+        var validModels = data.models.filter(function(m) {
+          var name = (m.name || "").replace("models/", "");
+          var methods = m.supportedGenerationMethods || [];
+          if (methods.indexOf("generateContent") === -1) return false;
+          if (!name.startsWith("gemini-")) return false;
+          var skip = ["tts", "embedding", "imagen", "veo", "banana", "lyria", "robotics", "computer-use", "audio", "transcribe", "translate"];
+          for (var i = 0; i < skip.length; i++) {
+            if (name.indexOf(skip[i]) !== -1) return false;
+          }
+          return true;
+        });
+
+        if (validModels.length > 0) {
+          var sel = document.getElementById("modelSelect");
+          var currentVal = sel.value;
+          sel.innerHTML = "";
+
+          // Sort so newest 4 / 3.8 / 3.6 / 3.5 / 3.1 / 2.5 models appear cleanly
+          validModels.sort(function(a, b) {
+            return b.name.localeCompare(a.name);
+          });
+
+          validModels.forEach(function(m) {
+            var id = m.name.replace("models/", "");
+            var opt = document.createElement("option");
+            opt.value = id;
+            var shortLabel = id.replace("gemini-", "").replace("-preview", " (Prev)");
+            opt.textContent = shortLabel;
+            opt.title = (m.displayName || id) + " (" + id + ")";
+            sel.appendChild(opt);
+          });
+
+          // Restore previous selection if present
+          var savedModel = safeStorage.get("word_ai_gemini_model") || currentVal;
+          if ([...sel.options].some(function(o) { return o.value === savedModel; })) {
+            sel.value = savedModel;
+          } else {
+            safeStorage.set("word_ai_gemini_model", sel.value);
+          }
+
+          if (statusEl) {
+            statusEl.innerHTML = `<span style="color:#15803d;">✓ Kalitingizda ${validModels.length} ta Gemini modeli faol!</span>`;
+          }
+        }
+      } catch (e) {
+        if (showFeedback && statusEl) {
+          statusEl.textContent = "Modellarni yuklashda tarmoq xatoligi.";
+        }
+      }
     };
 
     window.openSkillsModal = function() {
@@ -1121,7 +1364,7 @@
     };
 
     // =========================================================================
-    // 0.2 INPUT BOX HEIGHT RESIZING (DRAG HANDLE + EXPAND BUTTON + AUTO-GROW)
+    // 0.3 INPUT BOX HEIGHT RESIZING
     // =========================================================================
     var manualInputHeight = null;
     var isInputExpanded = false;
@@ -1160,7 +1403,7 @@
 
       function onMove(clientY) {
         if (!dragging) return;
-        var delta = startY - clientY; // dragging up increases height
+        var delta = startY - clientY;
         var newH = Math.min(Math.max(startH + delta, 38), 320);
         manualInputHeight = newH;
         area.style.height = newH + "px";
@@ -1216,6 +1459,12 @@
       var savedKey = safeStorage.get("word_ai_gemini_key");
       if (savedKey) document.getElementById("apiKeyInput").value = savedKey;
 
+      var savedStrict = safeStorage.get("word_ai_strict_model");
+      if (savedStrict) {
+        var stSel = document.getElementById("strictModelSelect");
+        if (stSel) stSel.value = savedStrict;
+      }
+
       var savedModel = safeStorage.get("word_ai_gemini_model");
       if (savedModel) {
         var sel = document.getElementById("modelSelect");
@@ -1224,6 +1473,8 @@
 
       loadSkillsFromStorage();
       initInputResizeDrag();
+      initDocumentChatPersistence();
+      syncModelsFromGoogle(false);
 
       setTimeout(function() {
         if (!isWordHost) {
@@ -1239,6 +1490,8 @@
       var txt = document.getElementById("wordStatusText");
       if (dot) dot.classList.remove("offline");
       if (txt) txt.textContent = "Word ulangan";
+
+      initDocumentChatPersistence();
 
       try {
         if (Office.context && Office.context.document) {
@@ -1385,24 +1638,58 @@
     }
 
     // =========================================================================
-    // 3. GEMINI API CLIENT (WITH AUTOMATIC SKILL INJECTION)
+    // 3. GEMINI API CLIENT (RESPECTS SELECTED MODEL + MULTI-TURN CONVERSATION)
     // =========================================================================
-    async function callGemini(promptText, systemInstruction) {
+    async function callGemini(promptText, systemInstruction, includeConversationHistory = false) {
       const apiKey = document.getElementById("apiKeyInput").value.trim();
       const preferredModel = document.getElementById("modelSelect").value;
+      const strictModeEl = document.getElementById("strictModelSelect");
+      const isStrict = !strictModeEl || strictModeEl.value === "strict";
       const finalSystemInstruction = buildSystemInstructionWithSkills(systemInstruction);
 
-      const candidateModels = [
-        preferredModel,
-        "gemini-3.8-flash",
-        "gemini-3.5-flash-lite",
-        "gemini-2.5-flash",
-        "gemini-2.0-flash"
-      ].filter((v, i, a) => a.indexOf(v) === i);
+      // Build contents array (with prior conversation history if requested)
+      const contents = [];
+      if (includeConversationHistory && chatHistory.length > 0) {
+        const recentHistory = chatHistory.slice(-14); // up to last 14 messages for context
+        for (let i = 0; i < recentHistory.length; i++) {
+          const item = recentHistory[i];
+          if (item.isError) continue;
+          const role = item.role === "user" ? "user" : "model";
+          const txt = (item.text || "").trim();
+          if (!txt) continue;
+          // Ensure alternating or valid role sequence
+          if (contents.length > 0 && contents[contents.length - 1].role === role) {
+            contents[contents.length - 1].parts[0].text += "\n" + txt;
+          } else if (contents.length === 0 && role === "model") {
+            continue; // Gemini requires first turn in contents to be "user"
+          } else {
+            contents.push({ role: role, parts: [{ text: txt }] });
+          }
+        }
+      }
+      if (contents.length > 0 && contents[contents.length - 1].role === "user") {
+        contents[contents.length - 1].parts[0].text += "\n\n" + promptText;
+      } else {
+        contents.push({ role: "user", parts: [{ text: promptText }] });
+      }
 
+      // In strict mode, ONLY run the exact model selected by the user!
+      const candidateModels = isStrict
+        ? [preferredModel]
+        : [
+            preferredModel,
+            "gemini-3.8-flash",
+            "gemini-3.6-flash",
+            "gemini-3-flash-preview",
+            "gemini-3.5-flash-lite",
+            "gemini-2.5-flash"
+          ].filter((v, i, a) => a.indexOf(v) === i);
+
+      let firstModelError = "";
       let lastError = "";
 
-      for (const modelId of candidateModels) {
+      for (let idx = 0; idx < candidateModels.length; idx++) {
+        const modelId = candidateModels[idx];
         const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelId}:generateContent?key=${encodeURIComponent(apiKey)}`;
         try {
           const response = await fetch(url, {
@@ -1410,7 +1697,7 @@
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
               systemInstruction: { parts: [{ text: finalSystemInstruction }] },
-              contents: [{ role: "user", parts: [{ text: promptText }] }],
+              contents: contents,
               generationConfig: { temperature: 0.2 }
             })
           });
@@ -1418,13 +1705,27 @@
           const data = await response.json();
           if (response.ok) {
             const text = data?.candidates?.[0]?.content?.parts?.[0]?.text;
-            if (text) return { ok: true, text: text.trim(), modelUsed: modelId };
+            if (text) {
+              return {
+                ok: true,
+                text: text.trim(),
+                modelUsed: modelId,
+                preferredModel: preferredModel,
+                fallbackReason: idx > 0 ? firstModelError : null
+              };
+            }
           } else {
-            lastError = data?.error?.message || `HTTP ${response.status}`;
-            if (response.status === 400 || response.status === 401) break;
+            const errMsg = data?.error?.message || `HTTP ${response.status}`;
+            if (idx === 0) firstModelError = errMsg;
+            lastError = errMsg;
+            if (response.status === 400 && errMsg.toLowerCase().includes("api key not valid")) {
+              break;
+            }
           }
         } catch (err) {
-          lastError = err.message || "Tarmoq xatoligi";
+          const errMsg = err.message || "Tarmoq xatoligi";
+          if (idx === 0) firstModelError = errMsg;
+          lastError = errMsg;
         }
       }
 
@@ -1440,7 +1741,8 @@
         return;
       }
 
-      const loadId = appendLoadingMsg(`${targetLanguage} tiliga tarjima qilinmoqda...`);
+      const selectedModelNow = document.getElementById("modelSelect").value;
+      const loadId = appendLoadingMsg(`${selectedModelNow} orqali ${targetLanguage} tiliga tarjima qilinmoqda...`);
       const writeMode = document.getElementById("writeBehaviorSelect").value;
 
       try {
@@ -1458,7 +1760,6 @@
           const selText = (selection.text || "").trim();
           updateAutoScopeUI(selText);
 
-          // AUTOMATIC: If user highlighted text -> translate ONLY selection; otherwise -> Whole Document
           if (selText.length > 0) {
             appendUserMsg(`Belgilangan qismni (${selText.split(/\s+/).length} soʻz) ${targetLanguage} tiliga tarjima qilish`);
 
@@ -1472,7 +1773,7 @@
                 `You are a professional translator inside Microsoft Word. Translate the given text accurately into ${targetLanguage}. Return ONLY the translated text without quotes or commentary.`
               );
               if (!res.ok) {
-                showApiError(loadId, res.error);
+                showApiError(loadId, res.error, res.modelUsed);
                 return;
               }
               const loc = writeMode === "append" ? Word.InsertLocation.after : Word.InsertLocation.replace;
@@ -1481,35 +1782,41 @@
 
               replaceLoadingMsg(
                 loadId,
-                `✅ <strong>Belgilangan qism</strong> ${targetLanguage} tiliga tarjima qilindi.<div class="status-badge">✓ Wordga yozildi</div>`,
-                getMetaWithSkill(res.modelUsed)
+                `✅ <strong>Belgilangan qism</strong> ${targetLanguage} tiliga tarjima qilindi.<div class="status-badge">✓ Wordga yozildi</div>${formatFallbackNotice(res)}`,
+                getMetaWithSkill(res.modelUsed),
+                false,
+                res.text
               );
               return;
             }
 
-            const count = await translateParagraphCollection(context, selParas.items, targetLanguage, loadId);
-            if (count !== null) {
+            const batchRes = await translateParagraphCollection(context, selParas.items, targetLanguage, loadId);
+            if (batchRes) {
               replaceLoadingMsg(
                 loadId,
-                `✅ <strong>Belgilangan qism (${count} ta abzas)</strong> formatni saqlagan holda ${targetLanguage} tiliga oʻgirildi.<div class="status-badge">✓ Wordga yozildi</div>`,
-                getMetaWithSkill(document.getElementById("modelSelect").value)
+                `✅ <strong>Belgilangan qism (${batchRes.count} ta abzas)</strong> formatni saqlagan holda ${targetLanguage} tiliga oʻgirildi.<div class="status-badge">✓ Wordga yozildi</div>`,
+                getMetaWithSkill(batchRes.modelUsed),
+                false,
+                `Translated ${batchRes.count} paragraphs to ${targetLanguage}`
               );
             }
             return;
           }
 
-          // OTHERWISE: WHOLE DOCUMENT
+          // WHOLE DOCUMENT
           appendUserMsg(`Butun hujjatni ${targetLanguage} tiliga tarjima qilish`);
           const allParas = context.document.body.paragraphs;
           allParas.load("items/text");
           await context.sync();
 
-          const count = await translateParagraphCollection(context, allParas.items, targetLanguage, loadId);
-          if (count !== null) {
+          const batchRes = await translateParagraphCollection(context, allParas.items, targetLanguage, loadId);
+          if (batchRes) {
             replaceLoadingMsg(
               loadId,
-              `✅ <strong>Butun hujjat (${count} ta abzas/qator)</strong> format va jadvallarni saqlagan holda ${targetLanguage} tiliga tarjima qilindi.<div class="status-badge">✓ Wordga yozildi</div>`,
-              getMetaWithSkill(document.getElementById("modelSelect").value)
+              `✅ <strong>Butun hujjat (${batchRes.count} ta abzas/qator)</strong> format va jadvallarni saqlagan holda ${targetLanguage} tiliga tarjima qilindi.<div class="status-badge">✓ Wordga yozildi</div>`,
+              getMetaWithSkill(batchRes.modelUsed),
+              false,
+              `Translated whole document (${batchRes.count} paragraphs) to ${targetLanguage}`
             );
           }
         });
@@ -1535,14 +1842,16 @@
         return null;
       }
 
+      let actualModelUsed = document.getElementById("modelSelect").value;
       const BATCH_SIZE = 20;
+
       for (let i = 0; i < sourceTexts.length; i += BATCH_SIZE) {
         const batchTexts = sourceTexts.slice(i, i + BATCH_SIZE);
         const batchParas = targetParas.slice(i, i + BATCH_SIZE);
 
         updateLoadingText(
           loadId,
-          `Tarjima qilinmoqda: ${i + 1}–${Math.min(i + BATCH_SIZE, sourceTexts.length)} / ${sourceTexts.length} abzas...`
+          `${actualModelUsed}: ${i + 1}–${Math.min(i + BATCH_SIZE, sourceTexts.length)} / ${sourceTexts.length} abzas tarjima qilinmoqda...`
         );
 
         const sysPrompt = `You are a professional translator for Microsoft Word.
@@ -1551,9 +1860,10 @@ Return ONLY a valid JSON array of strings of the exact same length (${batchTexts
 
         const res = await callGemini(JSON.stringify(batchTexts), sysPrompt);
         if (!res.ok) {
-          showApiError(loadId, res.error);
+          showApiError(loadId, res.error, res.modelUsed);
           return null;
         }
+        actualModelUsed = res.modelUsed;
 
         let translatedBatch = null;
         try {
@@ -1578,11 +1888,11 @@ Return ONLY a valid JSON array of strings of the exact same length (${batchTexts
         await context.sync();
       }
 
-      return targetParas.length;
+      return { count: targetParas.length, modelUsed: actualModelUsed };
     }
 
     // =========================================================================
-    // 5. QUICK AI ACTIONS & CUSTOM CHAT PROMPTS
+    // 5. QUICK AI ACTIONS & CUSTOM CHAT PROMPTS (WITH MULTI-TURN MEMORY)
     // =========================================================================
     async function executeAiAction(actionKey) {
       if (!isWordHost) {
@@ -1609,7 +1919,8 @@ Return ONLY a valid JSON array of strings of the exact same length (${batchTexts
       };
 
       const isReadOnly = actionKey === "summarize" || actionKey === "analyze";
-      const loadId = appendLoadingMsg("Bajarilmoqda...");
+      const selectedModelNow = document.getElementById("modelSelect").value;
+      const loadId = appendLoadingMsg(`${selectedModelNow} orqali bajarilmoqda...`);
 
       try {
         await Word.run(async (context) => {
@@ -1639,12 +1950,18 @@ Return ONLY a valid JSON array of strings of the exact same length (${batchTexts
           }
 
           if (isReadOnly) {
-            const res = await callGemini(targetText, instructions[actionKey]);
+            const res = await callGemini(targetText, instructions[actionKey], true);
             if (!res.ok) {
-              showApiError(loadId, res.error);
+              showApiError(loadId, res.error, res.modelUsed);
               return;
             }
-            replaceLoadingMsg(loadId, formatMarkdownToHtml(res.text), getMetaWithSkill(res.modelUsed));
+            replaceLoadingMsg(
+              loadId,
+              formatMarkdownToHtml(res.text) + formatFallbackNotice(res),
+              getMetaWithSkill(res.modelUsed),
+              false,
+              res.text
+            );
             return;
           }
 
@@ -1654,27 +1971,31 @@ Return ONLY a valid JSON array of strings of the exact same length (${batchTexts
               `${instructions[actionKey]} Return ONLY the revised text without commentary.`
             );
             if (!res.ok) {
-              showApiError(loadId, res.error);
+              showApiError(loadId, res.error, res.modelUsed);
               return;
             }
             selection.insertText(res.text, Word.InsertLocation.replace);
             await context.sync();
             replaceLoadingMsg(
               loadId,
-              `✅ Belgilangan qism yangilandi.<div class="status-badge">✓ Wordga yozildi</div>`,
-              getMetaWithSkill(res.modelUsed)
+              `✅ Belgilangan qism yangilandi.<div class="status-badge">✓ Wordga yozildi</div>${formatFallbackNotice(res)}`,
+              getMetaWithSkill(res.modelUsed),
+              false,
+              res.text
             );
           } else {
             const allParas = context.document.body.paragraphs;
             allParas.load("items/text");
             await context.sync();
 
-            const count = await transformParagraphCollection(context, allParas.items, instructions[actionKey], loadId);
-            if (count !== null) {
+            const batchRes = await transformParagraphCollection(context, allParas.items, instructions[actionKey], loadId);
+            if (batchRes) {
               replaceLoadingMsg(
                 loadId,
-                `✅ Butun hujjat (${count} ta abzas) tahrirlandi.<div class="status-badge">✓ Wordga yozildi</div>`,
-                getMetaWithSkill(document.getElementById("modelSelect").value)
+                `✅ Butun hujjat (${batchRes.count} ta abzas) tahrirlandi.<div class="status-badge">✓ Wordga yozildi</div>`,
+                getMetaWithSkill(batchRes.modelUsed),
+                false,
+                `Edited ${batchRes.count} paragraphs (${actionKey})`
               );
             }
           }
@@ -1698,12 +2019,14 @@ Return ONLY a valid JSON array of strings of the exact same length (${batchTexts
 
       if (targetParas.length === 0) return null;
 
+      let actualModelUsed = document.getElementById("modelSelect").value;
       const BATCH_SIZE = 20;
+
       for (let i = 0; i < sourceTexts.length; i += BATCH_SIZE) {
         const batchTexts = sourceTexts.slice(i, i + BATCH_SIZE);
         const batchParas = targetParas.slice(i, i + BATCH_SIZE);
 
-        updateLoadingText(loadId, `Tahrirlanmoqda: ${i + 1}–${Math.min(i + BATCH_SIZE, sourceTexts.length)} / ${sourceTexts.length}...`);
+        updateLoadingText(loadId, `${actualModelUsed}: ${i + 1}–${Math.min(i + BATCH_SIZE, sourceTexts.length)} / ${sourceTexts.length} tahrirlanmoqda...`);
 
         const sysPrompt = `You are an AI editor inside Microsoft Word.
 Task: ${taskInstruction}
@@ -1712,9 +2035,10 @@ Return ONLY a valid JSON array of strings with the exact same length (${batchTex
 
         const res = await callGemini(JSON.stringify(batchTexts), sysPrompt);
         if (!res.ok) {
-          showApiError(loadId, res.error);
+          showApiError(loadId, res.error, res.modelUsed);
           return null;
         }
+        actualModelUsed = res.modelUsed;
 
         let outBatch = null;
         try {
@@ -1733,7 +2057,7 @@ Return ONLY a valid JSON array of strings with the exact same length (${batchTex
           await context.sync();
         }
       }
-      return targetParas.length;
+      return { count: targetParas.length, modelUsed: actualModelUsed };
     }
 
     async function handleCustomPrompt() {
@@ -1752,7 +2076,8 @@ Return ONLY a valid JSON array of strings with the exact same length (${batchTex
         return;
       }
 
-      const loadId = appendLoadingMsg("Javob tayyorlanmoqda...");
+      const selectedModelNow = document.getElementById("modelSelect").value;
+      const loadId = appendLoadingMsg(`${selectedModelNow} javob tayyorlamoqda...`);
 
       try {
         await Word.run(async (context) => {
@@ -1776,6 +2101,7 @@ Return ONLY a valid JSON array of strings with the exact same length (${batchTex
           updateAutoScopeUI(selText);
 
           const sysPrompt = `You are Gemini Word AI working directly inside Microsoft Word (supporting Uzbek, Russian, English, and all languages).
+You have full access to the previous conversation history for this document.
 Return a valid JSON object with three keys:
 {
   "action": "edit_document" | "chat_reply",
@@ -1784,11 +2110,11 @@ Return a valid JSON object with three keys:
 }
 Use "edit_document" whenever the user asks to translate, write, draft, edit, rewrite, change, or add text to the document. Use "chat_reply" when the user asks a question, summary, or analysis without modifying the document. Return ONLY valid JSON.`;
 
-          const fullInput = `Active Scope: ${useSelection ? 'Highlighted Selection Only' : 'Whole Document'}\nContent:\n---\n${workingText || '(Empty Document)'}\n---\n\nUser Prompt: ${userPrompt}`;
-          const res = await callGemini(fullInput, sysPrompt);
+          const fullInput = `Active Document Scope: ${useSelection ? 'Highlighted Selection Only' : 'Whole Document'}\nDocument Content:\n---\n${workingText || '(Empty Document)'}\n---\n\nUser Request: ${userPrompt}`;
+          const res = await callGemini(fullInput, sysPrompt, true);
 
           if (!res.ok) {
-            showApiError(loadId, res.error);
+            showApiError(loadId, res.error, res.modelUsed);
             return;
           }
 
@@ -1808,19 +2134,35 @@ Use "edit_document" whenever the user asks to translate, write, draft, edit, rew
             }
             await context.sync();
 
+            const msgHtml = `${formatMarkdownToHtml(parsed.chat_message || "✅ Hujjat yangilandi.")}<div class="status-badge">✓ ${useSelection ? 'Belgilangan qismga' : 'Butun hujjatga'} yozildi</div>${formatFallbackNotice(res)}`;
             replaceLoadingMsg(
               loadId,
-              `${formatMarkdownToHtml(parsed.chat_message || "✅ Hujjat yangilandi.")}<div class="status-badge">✓ ${useSelection ? 'Belgilangan qismga' : 'Butun hujjatga'} yozildi</div>`,
-              getMetaWithSkill(res.modelUsed)
+              msgHtml,
+              getMetaWithSkill(res.modelUsed),
+              false,
+              parsed.chat_message || parsed.document_text
             );
           } else {
             const replyText = parsed ? (parsed.chat_message || parsed.document_text) : res.text;
-            replaceLoadingMsg(loadId, formatMarkdownToHtml(replyText), getMetaWithSkill(res.modelUsed));
+            replaceLoadingMsg(
+              loadId,
+              formatMarkdownToHtml(replyText) + formatFallbackNotice(res),
+              getMetaWithSkill(res.modelUsed),
+              false,
+              replyText
+            );
           }
         });
       } catch (err) {
         replaceLoadingMsg(loadId, `❌ Xatolik: ${escapeHtml(err.message)}`, "Xatolik", true);
       }
+    }
+
+    function formatFallbackNotice(res) {
+      if (res && res.fallbackReason && res.preferredModel && res.modelUsed !== res.preferredModel) {
+        return `<div class="fallback-warn">⚠️ Tanlangan <strong>${escapeHtml(res.preferredModel)}</strong> javob bermadi (${escapeHtml(res.fallbackReason.slice(0, 70))}) → <strong>${escapeHtml(res.modelUsed)}</strong> ishlatildi.</div>`;
+      }
+      return "";
     }
 
     function getMetaWithSkill(modelId) {
@@ -1831,14 +2173,14 @@ Use "edit_document" whenever the user asks to translate, write, draft, edit, rew
       return modelId;
     }
 
-    function showApiError(loadId, errMsg) {
-      const msg = `⚠️ <strong>Gemini API xatoligi:</strong> ${escapeHtml(errMsg)}<br/><br/>
-      Yuqoridagi <strong>⚙️</strong> tugmasini bosib, <a href="https://aistudio.google.com/app/apikey" target="_blank">Google AI Studio</a> dan olingan <code>AIzaSy...</code> API kalitini kiriting.`;
-      replaceLoadingMsg(loadId, msg, "API Xatolik", true);
+    function showApiError(loadId, errMsg, modelId) {
+      const msg = `⚠️ <strong>${escapeHtml(modelId || "Gemini API")} xatoligi:</strong> ${escapeHtml(errMsg)}<br/><br/>
+      <span style="font-size:11px;color:#475569;">Agar ushbu model bepul tarifda (Free Tier) cheklangan boʻlsa, yuqoridan boshqa modelni tanlang yoki <strong>⚙️ Sozlamalar</strong> ichida <em>"Avto-zaxira (Fallback)"</em> rejimini yoqing.</span>`;
+      replaceLoadingMsg(loadId, msg, (modelId || "API") + " • Xatolik", true);
     }
 
     // =========================================================================
-    // 6. UI HELPERS
+    // 6. UI HELPERS & PERSISTENT HISTORY RECORDING
     // =========================================================================
     function hideEmptyState() {
       const empty = document.getElementById("emptyState");
@@ -1853,6 +2195,13 @@ Use "edit_document" whenever the user asks to translate, write, draft, edit, rew
       div.innerHTML = `<div class="bubble">${escapeHtml(text)}</div>`;
       box.appendChild(div);
       box.scrollTop = box.scrollHeight;
+
+      chatHistory.push({
+        role: "user",
+        text: text,
+        ts: Date.now()
+      });
+      persistChatHistory();
     }
 
     function appendLoadingMsg(text) {
@@ -1873,7 +2222,7 @@ Use "edit_document" whenever the user asks to translate, write, draft, edit, rew
       if (el) el.innerHTML = `⏳ ${escapeHtml(newText)}`;
     }
 
-    function replaceLoadingMsg(id, htmlContent, metaLabel = "Gemini AI", isError = false) {
+    function replaceLoadingMsg(id, htmlContent, metaLabel = "Gemini AI", isError = false, rawTextForHistory = "") {
       const el = document.getElementById(id);
       if (!el) return;
       el.innerHTML = `
@@ -1886,6 +2235,16 @@ Use "edit_document" whenever the user asks to translate, write, draft, edit, rew
       `;
       const box = document.getElementById("chatContainer");
       box.scrollTop = box.scrollHeight;
+
+      chatHistory.push({
+        role: "bot",
+        html: htmlContent,
+        text: rawTextForHistory || el.innerText || "",
+        meta: metaLabel,
+        isError: isError,
+        ts: Date.now()
+      });
+      persistChatHistory();
     }
 
     function appendBotMsg(htmlContent, metaLabel = "Gemini AI", isError = false) {
@@ -1903,16 +2262,34 @@ Use "edit_document" whenever the user asks to translate, write, draft, edit, rew
       `;
       box.appendChild(div);
       box.scrollTop = box.scrollHeight;
+
+      chatHistory.push({
+        role: "bot",
+        html: htmlContent,
+        text: div.innerText || "",
+        meta: metaLabel,
+        isError: isError,
+        ts: Date.now()
+      });
+      persistChatHistory();
     }
 
-    function clearChat() {
-      const box = document.getElementById("chatContainer");
-      box.innerHTML = `
-        <div class="empty-hint" id="emptyState">
-          Matnni belgilasangiz — faqat oʻsha qism bilan, belgilanmasa — butun hujjat bilan ishlaydi.
-        </div>
-      `;
-    }
+    window.clearChatWithConfirm = function() {
+      if (chatHistory.length > 0) {
+        if (!confirm("Ushbu fayl boʻyicha saqlangan barcha chat yozishmalarini oʻchirib tozalamoqchimisiz?")) {
+          return;
+        }
+      }
+      chatHistory = [];
+      safeStorage.remove("word_ai_chat_" + currentDocId);
+      try {
+        if (isWordHost && Office.context && Office.context.document && Office.context.document.settings) {
+          Office.context.document.settings.remove("word_ai_chat_history");
+          Office.context.document.settings.saveAsync();
+        }
+      } catch (e) {}
+      renderSavedChatHistory();
+    };
 
     function saveModelChoice() {
       const model = document.getElementById("modelSelect").value;
