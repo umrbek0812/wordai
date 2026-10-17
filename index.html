@@ -7,7 +7,25 @@
   <meta http-equiv="Expires" content="0" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <title>Gemini Word AI</title>
-  <!-- Microsoft Office.js API -->
+  <!-- Preserve Word _host_Info across reloads so Office.js never falls back to Browser mode -->
+  <script>
+    (function() {
+      try {
+        var search = window.location.search || "";
+        var hash = window.location.hash || "";
+        if (search.indexOf("_host_Info=") !== -1) {
+          sessionStorage.setItem("word_ai_host_search", search);
+        } else {
+          var savedSearch = sessionStorage.getItem("word_ai_host_search");
+          if (savedSearch && savedSearch.indexOf("_host_Info=") !== -1) {
+            var merged = savedSearch + (search ? "&" + search.replace(/^\?/, "") : "");
+            window.history.replaceState(null, "", window.location.pathname + merged + hash);
+          }
+        }
+      } catch (e) {}
+    })();
+  </script>
+  <!-- Microsoft Office.js API (Synchronous load required by Word Add-in host) -->
   <script src="https://appsforoffice.microsoft.com/lib/1/hosted/office.js"></script>
   <style>
     :root {
@@ -483,38 +501,6 @@
       background: var(--primary);
     }
 
-    .chips-row {
-      display: flex;
-      align-items: center;
-      gap: 4px;
-      padding: 4px 8px;
-      overflow-x: auto;
-      background: var(--bg-subtle);
-      border-bottom: 1px solid var(--border);
-      scrollbar-width: none;
-    }
-    .chips-row::-webkit-scrollbar {
-      display: none;
-    }
-
-    .chip {
-      border: 1px solid var(--border-strong);
-      background: #ffffff;
-      color: var(--text-secondary);
-      padding: 2.5px 8px;
-      border-radius: 999px;
-      font-size: 10.5px;
-      font-weight: 600;
-      white-space: nowrap;
-      cursor: pointer;
-      transition: all 0.12s;
-    }
-    .chip:hover {
-      border-color: var(--primary);
-      color: var(--primary);
-      background: var(--primary-soft);
-    }
-
     .composer-wrap {
       padding: 5px 8px 8px;
       display: flex;
@@ -793,6 +779,60 @@
       text-overflow: ellipsis;
       white-space: nowrap;
     }
+
+    .compact-translate-select {
+      flex: 1;
+      height: 26px;
+      padding: 0 6px;
+      border-radius: 6px;
+      border: 1px solid var(--border-strong);
+      background: #ffffff;
+      color: var(--text-primary);
+      font-size: 10.5px;
+      font-weight: 600;
+      outline: none;
+      cursor: pointer;
+      min-width: 105px;
+    }
+    .compact-translate-select:hover {
+      border-color: var(--primary);
+      background: var(--primary-soft);
+    }
+    .settings-tabs {
+      display: flex;
+      border-bottom: 1px solid var(--border);
+      background: #f1f5f9;
+      padding: 4px 6px 0;
+      gap: 4px;
+      flex-shrink: 0;
+    }
+    .s-tab-btn {
+      flex: 1;
+      padding: 6px 4px;
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--text-muted);
+      background: transparent;
+      border: 1px solid transparent;
+      border-bottom: none;
+      border-radius: 6px 6px 0 0;
+      cursor: pointer;
+      text-align: center;
+      white-space: nowrap;
+    }
+    .s-tab-btn.active {
+      background: #ffffff;
+      color: var(--primary);
+      border-color: var(--border);
+    }
+    .s-tab-pane {
+      display: none;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .s-tab-pane.active {
+      display: flex;
+    }
   </style>
 </head>
 <body>
@@ -810,15 +850,15 @@
           </span>
         </div>
         <div class="util-btns">
-          <button class="mini-icon-btn skill-btn" onclick="openSkillsModal()" title="Gemini Skills (Doimiy qoidalar va uslublar)">🧠 Skills</button>
           <button class="mini-icon-btn accept" onclick="acceptAllInWord()" title="Barcha Track Changes tahrirlarini qabul qilish">✓</button>
           <button class="mini-icon-btn reject" onclick="rejectAllInWord()" title="Barcha tahrirlarni bekor qilish">↩️</button>
-          <button class="mini-icon-btn" onclick="clearChatWithConfirm()" title="Ushbu fayl boʻyicha chat tarixini tozalash">🗑️</button>
-          <button class="mini-icon-btn" onclick="openSettings()" title="API Key va Model Sozlamalari">⚙️</button>
+          <button class="mini-icon-btn" id="clearChatBtn" onclick="clearChatWithConfirm(this)" title="Ushbu fayl boʻyicha chat tarixini tozalash">🗑️</button>
+          <button class="mini-icon-btn" onclick="forceReloadAddin()" title="Plaginni yangilash (Keshni tozalab qayta yuklash)">🔄</button>
+          <button class="mini-icon-btn" onclick="openSettings('api')" title="Sozlamalar (API va Skills)">⚙️</button>
         </div>
       </div>
 
-      <!-- Row 2: Model + 1-Click Translation + Track ON/OFF on ONE SINGLE LINE -->
+      <!-- Row 2: Model + Single Translation Dropdown + Track ON/OFF on ONE SINGLE LINE -->
       <div class="unified-toolbar">
         <select class="compact-model-select" id="modelSelect" onchange="saveModelChoice()" title="Gemini Modelni tanlash (Kalitingizda mavjud modellar)">
           <option value="gemini-3.8-flash">3.8 Flash</option>
@@ -832,12 +872,13 @@
           <option value="gemini-2.5-pro">2.5 Pro</option>
         </select>
 
-        <div class="lang-strip">
-          <button class="t-btn" onclick="translateWordDocument('Uzbek (Latin script - Oʻzbek tili)')" title="Oʻzbek tiliga (Lotin) tarjima qilish">🇺🇿 Lot</button>
-          <button class="t-btn" onclick="translateWordDocument('Uzbek (Cyrillic script - Ўзбек тили)')" title="Ўзбек тилига (Кирилл) таржима қилиш">🇺🇿 Кир</button>
-          <button class="t-btn" onclick="translateWordDocument('Russian (Русский язык)')" title="Rus tiliga tarjima qilish">🇷🇺 Рус</button>
-          <button class="t-btn" onclick="translateWordDocument('English')" title="Ingliz tiliga tarjima qilish">🇬🇧 Eng</button>
-        </div>
+        <select class="compact-translate-select" id="translateSelect" onchange="onTranslateSelectChange(this)" title="Belgilangan qismni yoki butun hujjatni tarjima qilish">
+          <option value="" selected>🌐 Tarjima...</option>
+          <option value="Uzbek (Latin script - Oʻzbek tili)">🇺🇿 Oʻzbek (Lotin)</option>
+          <option value="Uzbek (Cyrillic script - Ўзбек тили)">🇺🇿 Ўзбек (Кирилл)</option>
+          <option value="Russian (Русский язык)">🇷🇺 Русский</option>
+          <option value="English">🇬🇧 English</option>
+        </select>
 
         <button class="track-pill-btn on" id="trackBtn" onclick="toggleTrackChanges()" title="Word Track Changes rejimini yoqish / oʻchirish">
           <span class="track-dot"></span>
@@ -861,14 +902,7 @@
         <div class="resize-grip"></div>
       </div>
 
-      <div class="chips-row">
-        <button class="chip" onclick="executeAiAction('rewrite')">✨ Tahrirlash</button>
-        <button class="chip" onclick="executeAiAction('grammar')">✓ Grammatika</button>
-        <button class="chip" onclick="executeAiAction('formal')">⚖️ Rasmiy</button>
-        <button class="chip" onclick="executeAiAction('summarize')">📋 Xulosa</button>
-        <button class="chip" onclick="executeAiAction('analyze')">🔍 Tahlil</button>
-        <button class="chip" onclick="executeAiAction('shorten')">✂️ Qisqa</button>
-      </div>
+
 
       <div class="composer-wrap">
         <!-- Automatic Scope Indicator + Active Skill Selector + Highlight Swatches -->
@@ -908,96 +942,92 @@
     </footer>
   </div>
 
-  <!-- MODAL 1: SETTINGS -->
+  <!-- UNIFIED SETTINGS MODAL (API & Model | Skills Editor) -->
   <div class="modal-overlay" id="settingsModal">
     <div class="modal">
       <div class="modal-head">
-        <span>⚙️ Gemini API va Model Sozlamalari</span>
+        <span>⚙️ Sozlamalar</span>
         <button class="mini-icon-btn" onclick="closeSettings()">✕</button>
       </div>
-      <div class="modal-body">
-        <div class="field">
-          <label>Gemini API Key (AIzaSy... bilan boshlanadi)</label>
-          <div style="display:flex; gap:4px;">
-            <input
-              type="text"
-              id="apiKeyInput"
-              style="flex:1;"
-              value="AQ.Ab8RN6IjEtF4vBHGLR8CRdAQ-i-bjPxOOfyYkb8w34XqWHZOcA"
-              placeholder="AIzaSy..."
-            />
-            <button class="secondary-btn" onclick="syncModelsFromGoogle(true)" title="Kalitingizda ochiq boʻlgan modellarni Google serveridan tekshirish">🔄 Modellar</button>
-          </div>
-          <span style="font-size:10px; color:var(--text-muted);" id="modelSyncStatus">
-            Bepul kalit olish: <a href="https://aistudio.google.com/app/apikey" target="_blank">aistudio.google.com/app/apikey</a>
-          </span>
-        </div>
-
-        <div class="field">
-          <label>Model ishlash rejimi</label>
-          <select id="strictModelSelect">
-            <option value="strict" selected>Faqat men tanlagan modelda javob bersin (Qatʼiy)</option>
-            <option value="fallback">Tanlangan modelda limit tugasa boshqa modelga oʻtsin (Avto-zaxira)</option>
-          </select>
-          <span style="font-size:10px; color:var(--text-muted);">
-            "Qatʼiy" rejimda faqat siz tepadan tanlagan model ishlatiladi va boshqa modelga oʻtib ketmaydi.
-          </span>
-        </div>
-
-        <div class="field">
-          <label>Yozish rejimi</label>
-          <select id="writeBehaviorSelect">
-            <option value="replace" selected>Ustiga yozish (Track Changes bilan)</option>
-            <option value="append">Davomidan qoʻshish (Insert After)</option>
-          </select>
-        </div>
-        <button class="save-btn" onclick="saveSettings()">Saqlash</button>
-      </div>
-    </div>
-  </div>
-
-  <!-- MODAL 2: GEMINI SKILLS MANAGER -->
-  <div class="modal-overlay" id="skillsModal">
-    <div class="modal">
-      <div class="modal-head">
-        <span>🧠 Gemini Skills (Doimiy Qoidalar)</span>
-        <button class="mini-icon-btn" onclick="closeSkillsModal()">✕</button>
+      <div class="settings-tabs">
+        <button class="s-tab-btn active" id="tabBtn_api" onclick="switchSettingsTab('api')">🔑 API va Model</button>
+        <button class="s-tab-btn" id="tabBtn_skills" onclick="switchSettingsTab('skills')">🧠 Skills</button>
       </div>
       <div class="modal-body">
-        <div class="field">
-          <label>Doimiy Global Qoidalar (Barcha javoblarda amal qiladi)</label>
-          <textarea
-            id="globalRulesInput"
-            rows="2"
-            placeholder="Masalan: Har doim rasmiy uslubda yoz, atamalarni oʻzgartirma..."
-          ></textarea>
-        </div>
-
-        <div class="field">
-          <div style="display:flex; justify-content:space-between; align-items:center;">
-            <label>Mavjud Skill'lar (Tahrirlash uchun tanlang)</label>
-            <button class="secondary-btn" style="padding:2px 7px; font-size:10px;" onclick="startNewSkill()">+ Yangi Skill</button>
+        <!-- TAB 1: API & MODEL -->
+        <div class="s-tab-pane active" id="tabPane_api">
+          <div class="field">
+            <label>Gemini API Key (AIzaSy... bilan boshlanadi)</label>
+            <div style="display:flex; gap:4px;">
+              <input
+                type="text"
+                id="apiKeyInput"
+                style="flex:1;"
+                value="AQ.Ab8RN6IjEtF4vBHGLR8CRdAQ-i-bjPxOOfyYkb8w34XqWHZOcA"
+                placeholder="AIzaSy..."
+              />
+              <button class="secondary-btn" onclick="syncModelsFromGoogle(true)" title="Kalitingizda ochiq boʻlgan modellarni Google serveridan tekshirish">🔄 Modellar</button>
+            </div>
+            <span style="font-size:10px; color:var(--text-muted);" id="modelSyncStatus">
+              Bepul kalit olish: <a href="https://aistudio.google.com/app/apikey" target="_blank">aistudio.google.com/app/apikey</a>
+            </span>
           </div>
-          <div class="skill-card-list" id="skillsListBox"></div>
+
+          <div class="field">
+            <label>Model ishlash rejimi</label>
+            <select id="strictModelSelect">
+              <option value="strict" selected>Faqat men tanlagan modelda javob bersin (Qatʼiy)</option>
+              <option value="fallback">Tanlangan modelda limit tugasa boshqa modelga oʻtsin (Avto-zaxira)</option>
+            </select>
+          </div>
+
+          <div class="field">
+            <label>Yozish rejimi</label>
+            <select id="writeBehaviorSelect">
+              <option value="replace" selected>Ustiga yozish (Track Changes bilan)</option>
+              <option value="append">Davomidan qoʻshish (Insert After)</option>
+            </select>
+          </div>
+          <button class="save-btn" onclick="saveSettings()">Saqlash</button>
         </div>
 
-        <div class="field">
-          <label>Skill Nomi</label>
-          <input type="text" id="skillNameInput" placeholder="Masalan: ⚖️ Oʻzbek Yuridik Uslubi" />
-        </div>
+        <!-- TAB 2: SKILLS EDITOR -->
+        <div class="s-tab-pane" id="tabPane_skills">
+          <div class="field">
+            <label>Doimiy Global Qoidalar (Barcha javoblarda amal qiladi)</label>
+            <textarea
+              id="globalRulesInput"
+              rows="2"
+              placeholder="Masalan: Har doim rasmiy uslubda yoz, atamalarni oʻzgartirma..."
+            ></textarea>
+          </div>
 
-        <div class="field">
-          <label>Skill Koʻrsatmasi (System Prompt / Qoidalar)</label>
-          <textarea
-            id="skillPromptInput"
-            rows="4"
-            placeholder="AI ushbu Skill yoqilganda qanday qoidalarga qatʼiy amal qilishi kerakligini yozing..."
-          ></textarea>
-        </div>
+          <div class="field">
+            <div style="display:flex; justify-content:space-between; align-items:center;">
+              <label>Mavjud Skill'lar (Tahrirlash uchun bosing)</label>
+              <button class="secondary-btn" style="padding:2px 7px; font-size:10px;" onclick="startNewSkill()">+ Yangi Skill</button>
+            </div>
+            <div class="skill-card-list" id="skillsListBox"></div>
+          </div>
 
-        <div style="display:flex; gap:6px;">
-          <button class="save-btn" style="flex:1;" onclick="saveSkillFromModal()">Saqlash va Faollashtirish</button>
-          <button class="danger-btn" onclick="deleteSelectedSkill()" title="Tanlangan Skill'ni oʻchirish">🗑️</button>
+          <div class="field">
+            <label>Skill Nomi</label>
+            <input type="text" id="skillNameInput" placeholder="Masalan: ⚖️ Oʻzbek Yuridik Uslubi" />
+          </div>
+
+          <div class="field">
+            <label>Skill Koʻrsatmasi (System Prompt / Qoidalar)</label>
+            <textarea
+              id="skillPromptInput"
+              rows="3"
+              placeholder="AI ushbu Skill yoqilganda qanday qoidalarga qatʼiy amal qilishi kerakligini yozing..."
+            ></textarea>
+          </div>
+
+          <div style="display:flex; gap:6px;">
+            <button class="save-btn" style="flex:1;" onclick="saveSkillFromModal()">Skillni Saqlash va Yoqish</button>
+            <button class="danger-btn" onclick="deleteSelectedSkill()" title="Tanlangan Skill'ni oʻchirish">🗑️</button>
+          </div>
         </div>
       </div>
     </div>
@@ -1251,14 +1281,59 @@
     }
 
     // =========================================================================
-    // 0.2 MODALS: SETTINGS & LIVE GOOGLE MODELS SYNC
+    // 0.2 UNIFIED SETTINGS MODAL (API & MODEL | SKILLS)
     // =========================================================================
-    window.openSettings = function() {
+    window.onTranslateSelectChange = function(sel) {
+      if (!sel) return;
+      var targetLang = sel.value;
+      sel.value = "";
+      if (targetLang) {
+        translateWordDocument(targetLang);
+      }
+    };
+
+    window.forceReloadAddin = function() {
+      try {
+        var u = new URL(window.location.href);
+        var savedSearch = sessionStorage.getItem("word_ai_host_search");
+        if (savedSearch && !u.searchParams.has("_host_Info")) {
+          var sp = new URLSearchParams(savedSearch);
+          sp.forEach(function(val, key) { u.searchParams.set(key, val); });
+        }
+        u.searchParams.set("v", Date.now());
+        window.location.replace(u.toString());
+      } catch (e) {
+        window.location.reload(true);
+      }
+    };
+
+    window.switchSettingsTab = function(tabName) {
+      var tabs = ["api", "skills"];
+      tabs.forEach(function(t) {
+        var btn = document.getElementById("tabBtn_" + t);
+        var pane = document.getElementById("tabPane_" + t);
+        if (btn) btn.classList.toggle("active", t === tabName);
+        if (pane) pane.classList.toggle("active", t === tabName);
+      });
+      if (tabName === "skills") {
+        document.getElementById("globalRulesInput").value = globalCustomRules || "";
+        editingSkillId = activeSkillId !== "none" ? activeSkillId : (skillsCatalog[1] ? skillsCatalog[1].id : "none");
+        renderSkillsModalList();
+        populateSkillEditorFields(editingSkillId);
+      }
+    };
+
+    window.openSettings = function(initialTab) {
       var m = document.getElementById("settingsModal");
       if (m) {
         m.classList.add("open");
         m.style.display = "flex";
+        window.switchSettingsTab(initialTab || "api");
       }
+    };
+
+    window.openSkillsModal = function() {
+      window.openSettings("skills");
     };
 
     window.closeSettings = function() {
@@ -1284,7 +1359,6 @@
       appendBotMsg("✅ API kalit va model sozlamalari saqlandi.");
     };
 
-    // Fetch live models enabled on the user's Google AI Studio API Key
     window.syncModelsFromGoogle = async function(showFeedback) {
       var inp = document.getElementById("apiKeyInput");
       var statusEl = document.getElementById("modelSyncStatus");
@@ -1311,7 +1385,6 @@
           return;
         }
 
-        // Filter generative text/multimodal models
         var validModels = data.models.filter(function(m) {
           var name = (m.name || "").replace("models/", "");
           var methods = m.supportedGenerationMethods || [];
@@ -1329,7 +1402,6 @@
           var currentVal = sel.value;
           sel.innerHTML = "";
 
-          // Sort so newest 4 / 3.8 / 3.6 / 3.5 / 3.1 / 2.5 models appear cleanly
           validModels.sort(function(a, b) {
             return b.name.localeCompare(a.name);
           });
@@ -1344,7 +1416,6 @@
             sel.appendChild(opt);
           });
 
-          // Restore previous selection if present
           var savedModel = safeStorage.get("word_ai_gemini_model") || currentVal;
           if ([...sel.options].some(function(o) { return o.value === savedModel; })) {
             sel.value = savedModel;
@@ -1363,25 +1434,6 @@
       }
     };
 
-    window.openSkillsModal = function() {
-      var m = document.getElementById("skillsModal");
-      if (!m) return;
-      document.getElementById("globalRulesInput").value = globalCustomRules || "";
-      editingSkillId = activeSkillId !== "none" ? activeSkillId : (skillsCatalog[1] ? skillsCatalog[1].id : "none");
-      renderSkillsModalList();
-      populateSkillEditorFields(editingSkillId);
-      m.classList.add("open");
-      m.style.display = "flex";
-    };
-
-    window.closeSkillsModal = function() {
-      var m = document.getElementById("skillsModal");
-      if (m) {
-        m.classList.remove("open");
-        m.style.display = "none";
-      }
-    };
-
     function renderSkillsModalList() {
       var box = document.getElementById("skillsListBox");
       if (!box) return;
@@ -1395,8 +1447,8 @@
           renderSkillsModalList();
           populateSkillEditorFields(sk.id);
         };
-        row.innerHTML = '<span class="skill-item-title">' + escapeHtml(sk.name) + '</span>' +
-          (sk.id === activeSkillId ? '<span style="font-size:9.5px;color:#7c3aed;font-weight:700;">● Faol</span>' : '');
+        row.innerHTML = `<span class="skill-item-title">${escapeHtml(sk.name)}</span>` +
+          (sk.id === activeSkillId ? `<span style="font-size:9.5px;color:#7c3aed;font-weight:700;">● Faol</span>` : "");
         box.appendChild(row);
       });
     }
@@ -1442,7 +1494,7 @@
 
       saveSkillsToStorage();
       renderSkillSelectorDropdown();
-      window.closeSkillsModal();
+      window.closeSettings();
       var activeSk = skillsCatalog.find(function(s) { return s.id === activeSkillId; });
       appendBotMsg("✅ Skill saqlandi va faollashtirildi: <strong>" + escapeHtml(activeSk ? activeSk.name : "Standart") + "</strong>");
     };
@@ -1544,11 +1596,13 @@
     }
 
     // =========================================================================
-    // 1. STATE & AUTOMATIC SELECTION DETECTION IN WORD
+    // 1. STATE & AUTOMATIC SELECTION DETECTION IN WORD (BULLETPROOF HOST INIT)
     // =========================================================================
     var isWordHost = false;
+    var wordReadyInitialized = false;
     var trackChangesOn = true;
     var activeSelectionText = "";
+    var forceWholeDocOverride = false;
 
     window.addEventListener("DOMContentLoaded", function() {
       var savedKey = safeStorage.get("word_ai_gemini_key");
@@ -1571,12 +1625,28 @@
       initDocumentChatPersistence();
       syncModelsFromGoogle(false);
 
-      setTimeout(function() {
-        if (!isWordHost) {
-          var txt = document.getElementById("wordStatusText");
-          if (txt && txt.textContent === "Ulanmoqda...") setStandaloneStatus();
+      // Actively poll for Word / Office host so it never gets stuck in Browser mode inside Word
+      var pollCount = 0;
+      var hostPollTimer = setInterval(function() {
+        pollCount++;
+        if (isWordHost) {
+          clearInterval(hostPollTimer);
+          return;
         }
-      }, 1500);
+        if (typeof Word !== "undefined" && typeof Word.run === "function") {
+          onWordReady();
+          clearInterval(hostPollTimer);
+          return;
+        }
+        if (typeof Office !== "undefined" && Office.context && Office.context.document) {
+          onWordReady();
+          clearInterval(hostPollTimer);
+          return;
+        }
+        if (pollCount >= 12 && !isWordHost) {
+          setStandaloneStatus();
+        }
+      }, 350);
     });
 
     function onWordReady() {
@@ -1586,57 +1656,113 @@
       if (dot) dot.classList.remove("offline");
       if (txt) txt.textContent = "Word ulangan";
 
+      if (wordReadyInitialized) return;
+      wordReadyInitialized = true;
+
       initDocumentChatPersistence();
 
       try {
-        if (Office.context && Office.context.document) {
+        if (typeof Office !== "undefined" && Office.context && Office.context.document && Office.context.document.addHandlerAsync) {
           Office.context.document.addHandlerAsync(
             Office.EventType.DocumentSelectionChanged,
-            checkSelectionInWord
+            function() {
+              forceWholeDocOverride = false;
+              checkSelectionInWord();
+            }
           );
         }
       } catch (e) {}
 
-      setInterval(checkSelectionInWord, 1000);
+      setInterval(checkSelectionInWord, 700);
       syncTrackChangesToWord();
       checkSelectionInWord();
     }
 
-    if (typeof Office !== "undefined") {
-      Office.initialize = function () {
-        onWordReady();
-      };
-      if (Office.onReady) {
-        Office.onReady(function(info) {
-          if (info && info.host === Office.HostType.Word) {
-            onWordReady();
-          } else {
-            setStandaloneStatus();
-          }
-        });
+    async function ensureWordConnected() {
+      if (isWordHost && typeof Word !== "undefined" && typeof Word.run === "function") {
+        return true;
       }
-    } else {
-      setStandaloneStatus();
+      if (typeof Word !== "undefined" && typeof Word.run === "function") {
+        onWordReady();
+        return true;
+      }
+      if (typeof Office !== "undefined" && Office.onReady) {
+        try {
+          var info = await Office.onReady();
+          if ((info && info.host === Office.HostType.Word) || (typeof Word !== "undefined" && typeof Word.run === "function")) {
+            onWordReady();
+            return true;
+          }
+        } catch (e) {}
+      }
+      if (typeof Word !== "undefined" && typeof Word.run === "function") {
+        onWordReady();
+        return true;
+      }
+      return false;
     }
 
+    (function bootOfficeHost() {
+      try {
+        if (typeof Office !== "undefined") {
+          Office.initialize = function () {
+            onWordReady();
+          };
+          if (Office.onReady) {
+            Office.onReady(function(info) {
+              if ((info && info.host === Office.HostType.Word) || (typeof Word !== "undefined" && typeof Word.run === "function") || (Office.context && Office.context.document)) {
+                onWordReady();
+              } else {
+                setStandaloneStatus();
+              }
+            });
+          }
+        }
+      } catch (e) {}
+    })();
+
     function setStandaloneStatus() {
+      if (typeof Word !== "undefined" && typeof Word.run === "function") {
+        onWordReady();
+        return;
+      }
       var dot = document.getElementById("wordStatusDot");
       var txt = document.getElementById("wordStatusText");
       if (dot) dot.classList.add("offline");
       if (txt) txt.textContent = "Brauzer";
     }
 
+    window.clearSelectionLock = function(ev) {
+      if (ev) ev.stopPropagation();
+      forceWholeDocOverride = true;
+      activeSelectionText = "";
+      updateAutoScopeUI("");
+    };
+
     async function checkSelectionInWord() {
-      if (!isWordHost) return;
+      if (!isWordHost && typeof Word === "undefined") return;
       try {
         await Word.run(async (context) => {
           const sel = context.document.getSelection();
           sel.load("text");
           await context.sync();
 
-          const text = (sel.text || "").trim();
-          activeSelectionText = text;
-          updateAutoScopeUI(text);
+          const rawText = (sel.text || "").replace(/[\r\n\u0007\u000b\f]+/g, " ").trim();
+          if (rawText.length > 0) {
+            if (!forceWholeDocOverride) {
+              activeSelectionText = (sel.text || "").trim();
+              updateAutoScopeUI(activeSelectionText);
+            }
+          } else {
+            // Only clear if the user is not currently typing inside the prompt input box
+            var activeEl = document.activeElement;
+            var isTypingInPanel = activeEl && (activeEl.id === "promptInput" || activeEl.tagName === "BUTTON" || activeEl.tagName === "SELECT");
+            if (!isTypingInPanel) {
+              forceWholeDocOverride = false;
+              activeSelectionText = "";
+              updateAutoScopeUI("");
+            }
+          }
         });
       } catch (e) {}
     }
@@ -1644,13 +1770,16 @@
     function updateAutoScopeUI(selText) {
       const ind = document.getElementById("scopeIndicator");
       if (!ind) return;
-      if (selText && selText.length > 0) {
-        const words = selText.split(/\s+/).length;
-        const snippet = selText.length > 20 ? selText.slice(0, 20) + "…" : selText;
+      const clean = (selText || "").trim();
+      if (clean.length > 0 && !forceWholeDocOverride) {
+        const words = clean.split(/\s+/).filter(Boolean).length;
+        const snippet = clean.length > 18 ? clean.slice(0, 18) + "…" : clean;
         ind.className = "scope-indicator is-selection";
-        ind.innerHTML = `✨ Tanlangan (${words}): "${escapeHtml(snippet)}"`;
+        ind.title = "Faqat belgilangan qism bilan ishlaydi: " + clean.slice(0, 200);
+        ind.innerHTML = `✨ Tanlangan (${words} soʻz): "${escapeHtml(snippet)}" <span onclick="clearSelectionLock(event)" title="Butun hujjat rejimiga oʻtish" style="cursor:pointer;margin-left:3px;color:#b91c1c;font-weight:700;">✕</span>`;
       } else {
         ind.className = "scope-indicator";
+        ind.title = "Matn belgilanmagan — butun hujjat bilan ishlaydi";
         ind.innerHTML = `📄 Avto: <strong>Butun hujjat</strong>`;
       }
     }
@@ -1668,7 +1797,7 @@
     }
 
     async function syncTrackChangesToWord() {
-      if (!isWordHost) return;
+      if (!(await ensureWordConnected())) return;
       try {
         await Word.run(async (context) => {
           if (Word.ChangeTrackingMode) {
@@ -1682,7 +1811,7 @@
     }
 
     async function highlightInWord(colorHex) {
-      if (!isWordHost) return;
+      if (!(await ensureWordConnected())) return;
       try {
         await Word.run(async (context) => {
           const range = context.document.getSelection();
@@ -1693,7 +1822,7 @@
     }
 
     async function acceptAllInWord() {
-      if (!isWordHost) return;
+      if (!(await ensureWordConnected())) return;
       try {
         await Word.run(async (context) => {
           if (typeof context.document.acceptAllRevisions === "function") {
@@ -1713,7 +1842,7 @@
     }
 
     async function rejectAllInWord() {
-      if (!isWordHost) return;
+      if (!(await ensureWordConnected())) return;
       try {
         await Word.run(async (context) => {
           if (typeof context.document.rejectAllRevisions === "function") {
@@ -1953,7 +2082,8 @@
     // 4. AUTOMATIC SELECTION VS WHOLE DOCUMENT TRANSLATION
     // =========================================================================
     async function translateWordDocument(targetLanguage) {
-      if (!isWordHost) {
+      const connected = await ensureWordConnected();
+      if (!connected) {
         appendBotMsg("⚠️ Haqiqiy hujjatni tarjima qilish uchun plaginni Microsoft Word ichida oching.", "Word ulanmagan", true);
         return;
       }
@@ -1974,32 +2104,44 @@
           selection.load("text");
           await context.sync();
 
-          const selText = (selection.text || "").trim();
+          const liveSel = (selection.text || "").trim();
+          const selText = forceWholeDocOverride ? "" : (liveSel.length > 0 ? liveSel : activeSelectionText);
           updateAutoScopeUI(selText);
 
           if (selText.length > 0) {
-            appendUserMsg(`Belgilangan qismni (${selText.split(/\s+/).length} soʻz) ${targetLanguage} tiliga tarjima qilish`);
+            appendUserMsg(`Belgilangan qismni (${selText.split(/\s+/).filter(Boolean).length} soʻz) ${targetLanguage} tiliga tarjima qilish`);
 
             const selParas = selection.paragraphs;
             selParas.load("items/text");
             await context.sync();
 
-            if (selParas.items.length <= 1) {
+            if (selParas.items.length <= 1 || liveSel.length === 0) {
               const res = await callGemini(
                 selText,
-                `You are a professional translator inside Microsoft Word. Translate the given text accurately into ${targetLanguage}. Return ONLY the translated text without quotes or commentary.`
+                `You are a professional translator inside Microsoft Word. Translate ONLY the given text accurately into ${targetLanguage}. Return ONLY the translated text without quotes or commentary.`
               );
               if (!res.ok) {
                 showApiError(loadId, res.error, res.modelUsed);
                 return;
               }
-              const loc = writeMode === "append" ? Word.InsertLocation.after : Word.InsertLocation.replace;
-              selection.insertText(writeMode === "append" ? " " + res.text : res.text, loc);
-              await context.sync();
+              if (liveSel.length > 0) {
+                const loc = writeMode === "append" ? Word.InsertLocation.after : Word.InsertLocation.replace;
+                selection.insertText(writeMode === "append" ? " " + res.text : res.text, loc);
+                await context.sync();
+              } else if (selText.length <= 240) {
+                const found = context.document.body.search(selText, { matchCase: false, ignoreSpace: true });
+                found.load("items");
+                await context.sync();
+                if (found.items.length > 0) {
+                  const loc = writeMode === "append" ? Word.InsertLocation.after : Word.InsertLocation.replace;
+                  found.items[0].insertText(writeMode === "append" ? " " + res.text : res.text, loc);
+                  await context.sync();
+                }
+              }
 
               replaceLoadingMsg(
                 loadId,
-                `✅ <strong>Belgilangan qism</strong> ${targetLanguage} tiliga tarjima qilindi.<div class="status-badge">✓ Wordga yozildi</div>${formatFallbackNotice(res)}`,
+                `✅ <strong>Faqat belgilangan qism</strong> ${targetLanguage} tiliga tarjima qilindi.<div class="status-badge">✓ Faqat belgilangan joy Wordga yozildi</div>${formatFallbackNotice(res)}`,
                 getMetaWithSkill(res.modelUsed),
                 false,
                 res.text
@@ -2011,10 +2153,10 @@
             if (batchRes) {
               replaceLoadingMsg(
                 loadId,
-                `✅ <strong>Belgilangan qism (${batchRes.count} ta abzas)</strong> formatni saqlagan holda ${targetLanguage} tiliga oʻgirildi.<div class="status-badge">✓ Wordga yozildi</div>`,
+                `✅ <strong>Faqat belgilangan qism (${batchRes.count} ta abzas)</strong> formatni saqlagan holda ${targetLanguage} tiliga oʻgirildi.<div class="status-badge">✓ Wordga yozildi</div>`,
                 getMetaWithSkill(batchRes.modelUsed),
                 false,
-                `Translated ${batchRes.count} paragraphs to ${targetLanguage}`
+                `Translated ${batchRes.count} selected paragraphs to ${targetLanguage}`
               );
             }
             return;
@@ -2109,173 +2251,8 @@ Return ONLY a valid JSON array of strings of the exact same length (${batchTexts
     }
 
     // =========================================================================
-    // 5. QUICK AI ACTIONS & CUSTOM CHAT PROMPTS (WITH MULTI-TURN MEMORY)
+    // 5. QUICK AI ACTIONS & CUSTOM CHAT PROMPTS (STRICT SELECTION ISOLATION)
     // =========================================================================
-    async function executeAiAction(actionKey) {
-      if (!isWordHost) {
-        appendBotMsg("⚠️ Plaginni Microsoft Word ichida oching.", "Word ulanmagan", true);
-        return;
-      }
-
-      const labels = {
-        rewrite: "✨ Matnni tahrirlash va ravonlashtirish",
-        grammar: "✓ Grammatika va imlo xatolarini tuzatish",
-        formal: "⚖️ Rasmiy va yuridik uslubga oʻtkazish",
-        summarize: "📋 Qisqacha xulosa (Summary)",
-        analyze: "🔍 Hujjatni tahlil qilish",
-        shorten: "✂️ Maʼnoni saqlagan holda qisqartirish"
-      };
-
-      const instructions = {
-        rewrite: "Rewrite and polish the text to improve clarity and flow in its current language.",
-        grammar: "Fix all grammar, spelling, and punctuation errors in its current language.",
-        formal: "Rewrite the text into a formal, executive, and legally rigorous tone in its current language.",
-        shorten: "Make the text concise and direct without losing key facts or figures.",
-        summarize: "Provide a clear, structured summary in the same language using bullet points.",
-        analyze: "Analyze key terms, obligations, missing clauses, and risks concisely."
-      };
-
-      const isReadOnly = actionKey === "summarize" || actionKey === "analyze";
-      const selectedModelNow = document.getElementById("modelSelect").value;
-      const loadId = appendLoadingMsg(`${selectedModelNow} orqali bajarilmoqda...`);
-
-      try {
-        await Word.run(async (context) => {
-          if (Word.ChangeTrackingMode && !isReadOnly) {
-            context.document.changeTrackingMode = trackChangesOn
-              ? Word.ChangeTrackingMode.trackAll
-              : Word.ChangeTrackingMode.off;
-          }
-
-          const selection = context.document.getSelection();
-          const body = context.document.body;
-          selection.load("text");
-          body.load("text");
-          await context.sync();
-
-          const selText = (selection.text || "").trim();
-          const bodyText = (body.text || "").trim();
-          const useSelection = selText.length > 0;
-          const targetText = useSelection ? selText : bodyText;
-
-          updateAutoScopeUI(selText);
-          appendUserMsg(`${labels[actionKey]} (${useSelection ? 'Belgilangan qism' : 'Butun hujjat'})`);
-
-          if (!targetText) {
-            replaceLoadingMsg(loadId, "⚠️ Hujjat boʻsh.", "Boʻsh hujjat", true);
-            return;
-          }
-
-          if (isReadOnly) {
-            const res = await callGemini(targetText, instructions[actionKey], true);
-            if (!res.ok) {
-              showApiError(loadId, res.error, res.modelUsed);
-              return;
-            }
-            replaceLoadingMsg(
-              loadId,
-              formatMarkdownToHtml(res.text) + formatFallbackNotice(res),
-              getMetaWithSkill(res.modelUsed),
-              false,
-              res.text
-            );
-            return;
-          }
-
-          if (useSelection) {
-            const res = await callGemini(
-              selText,
-              `${instructions[actionKey]} Return ONLY the revised text without commentary.`
-            );
-            if (!res.ok) {
-              showApiError(loadId, res.error, res.modelUsed);
-              return;
-            }
-            selection.insertText(res.text, Word.InsertLocation.replace);
-            await context.sync();
-            replaceLoadingMsg(
-              loadId,
-              `✅ Belgilangan qism yangilandi.<div class="status-badge">✓ Wordga yozildi</div>${formatFallbackNotice(res)}`,
-              getMetaWithSkill(res.modelUsed),
-              false,
-              res.text
-            );
-          } else {
-            const allParas = context.document.body.paragraphs;
-            allParas.load("items/text");
-            await context.sync();
-
-            const batchRes = await transformParagraphCollection(context, allParas.items, instructions[actionKey], loadId);
-            if (batchRes) {
-              replaceLoadingMsg(
-                loadId,
-                `✅ Butun hujjat (${batchRes.count} ta abzas) tahrirlandi.<div class="status-badge">✓ Wordga yozildi</div>`,
-                getMetaWithSkill(batchRes.modelUsed),
-                false,
-                `Edited ${batchRes.count} paragraphs (${actionKey})`
-              );
-            }
-          }
-        });
-      } catch (err) {
-        replaceLoadingMsg(loadId, `❌ Xatolik: ${escapeHtml(err.message)}`, "Xatolik", true);
-      }
-    }
-
-    async function transformParagraphCollection(context, paraItems, taskInstruction, loadId) {
-      const targetParas = [];
-      const sourceTexts = [];
-
-      for (const p of paraItems) {
-        const t = (p.text || "").trim();
-        if (t.length > 0) {
-          targetParas.push(p);
-          sourceTexts.push(t);
-        }
-      }
-
-      if (targetParas.length === 0) return null;
-
-      let actualModelUsed = document.getElementById("modelSelect").value;
-      const BATCH_SIZE = 20;
-
-      for (let i = 0; i < sourceTexts.length; i += BATCH_SIZE) {
-        const batchTexts = sourceTexts.slice(i, i + BATCH_SIZE);
-        const batchParas = targetParas.slice(i, i + BATCH_SIZE);
-
-        updateLoadingText(loadId, `${actualModelUsed}: ${i + 1}–${Math.min(i + BATCH_SIZE, sourceTexts.length)} / ${sourceTexts.length} tahrirlanmoqda...`);
-
-        const sysPrompt = `You are an AI editor inside Microsoft Word.
-Task: ${taskInstruction}
-Process every string in the input JSON array.
-Return ONLY a valid JSON array of strings with the exact same length (${batchTexts.length}). Do NOT use markdown code blocks.`;
-
-        const res = await callGemini(JSON.stringify(batchTexts), sysPrompt);
-        if (!res.ok) {
-          showApiError(loadId, res.error, res.modelUsed);
-          return null;
-        }
-        actualModelUsed = res.modelUsed;
-
-        let outBatch = null;
-        try {
-          const cleanJson = res.text.replace(/^```json\s*/i, "").replace(/```\s*$/i, "").trim();
-          const parsed = JSON.parse(cleanJson);
-          if (Array.isArray(parsed) && parsed.length === batchTexts.length) outBatch = parsed;
-        } catch (e) {}
-
-        if (outBatch) {
-          for (let j = 0; j < batchParas.length; j++) {
-            const newText = String(outBatch[j] || batchTexts[j]).trim();
-            if (newText && newText !== batchTexts[j]) {
-              batchParas[j].insertText(newText, Word.InsertLocation.replace);
-            }
-          }
-          await context.sync();
-        }
-      }
-      return { count: targetParas.length, modelUsed: actualModelUsed };
-    }
 
     // Store proposed surgical edits by batch ID so user can click "Apply" or say "Shuni yoz"
     var pendingEditBatches = {};
@@ -2325,7 +2302,6 @@ Return ONLY a valid JSON array of strings with the exact same length (${batchTex
         while (prefixLen < minLen && oldFullText[prefixLen] === newSnippet[prefixLen]) {
           prefixLen++;
         }
-        // Snap prefix back to word boundary
         while (prefixLen > 0 && !/\s/.test(oldFullText[prefixLen - 1])) {
           prefixLen--;
         }
@@ -2340,7 +2316,6 @@ Return ONLY a valid JSON array of strings with the exact same length (${batchTex
           oldSuffixIdx--;
           newSuffixIdx--;
         }
-        // Snap suffix forward to word boundary
         while (oldSuffixIdx < oldFullText.length && !/\s/.test(oldFullText[oldSuffixIdx])) {
           oldSuffixIdx++;
           newSuffixIdx++;
@@ -2349,7 +2324,6 @@ Return ONLY a valid JSON array of strings with the exact same length (${batchTex
         var changedOldSub = oldFullText.slice(prefixLen, oldSuffixIdx).trim();
         var changedNewSub = newSnippet.slice(prefixLen, newSuffixIdx).trim();
 
-        // If the diff is a specific substring inside the paragraph (and not the entire paragraph), replace only that substring!
         if (
           changedOldSub.length >= 4 &&
           changedOldSub.length <= 240 &&
@@ -2366,15 +2340,16 @@ Return ONLY a valid JSON array of strings with the exact same length (${batchTex
         }
       }
 
-      // 3. Fallback: replace only this specific paragraph's text (preserving paragraph style, heading, list, or table cell!)
+      // 3. Fallback: replace only this specific paragraph's text
       para.insertText(newSnippet, Word.InsertLocation.replace);
       await context.sync();
       return true;
     }
 
-    // Execute an array of surgical edits on the real Word document without ever flattening the rest of the document
-    async function executeSurgicalEditsInWord(editsArray) {
-      if (!isWordHost || !Array.isArray(editsArray) || editsArray.length === 0) return 0;
+    // Execute an array of surgical edits on the real Word document (strictly scoped to selection if restrictToSelection is true!)
+    async function executeSurgicalEditsInWord(editsArray, restrictToSelection = false) {
+      const connected = await ensureWordConnected();
+      if (!connected || !Array.isArray(editsArray) || editsArray.length === 0) return 0;
       let appliedCount = 0;
 
       await Word.run(async (context) => {
@@ -2384,20 +2359,28 @@ Return ONLY a valid JSON array of strings with the exact same length (${batchTex
             : Word.ChangeTrackingMode.off;
         }
 
-        const allParas = context.document.body.paragraphs;
-        allParas.load("items/text");
+        const selection = context.document.getSelection();
+        selection.load("text");
+        await context.sync();
+        const hasLiveSelection = (selection.text || "").trim().length > 0;
+
+        // If user highlighted text (restrictToSelection), load ONLY selection.paragraphs!
+        const paraCollection = (restrictToSelection && hasLiveSelection)
+          ? selection.paragraphs
+          : context.document.body.paragraphs;
+
+        paraCollection.load("items/text");
         await context.sync();
 
         const nonEmptyParas = [];
-        for (let i = 0; i < allParas.items.length; i++) {
-          const t = (allParas.items[i].text || "").trim();
+        for (let i = 0; i < paraCollection.items.length; i++) {
+          const t = (paraCollection.items[i].text || "").trim();
           if (t.length > 0) {
-            nonEmptyParas.push({ para: allParas.items[i], text: t, index: nonEmptyParas.length + 1 });
+            nonEmptyParas.push({ para: paraCollection.items[i], text: t, index: nonEmptyParas.length + 1 });
           }
         }
 
-        // If document is completely empty and we are inserting new paragraphs
-        if (nonEmptyParas.length === 0) {
+        if (nonEmptyParas.length === 0 && !restrictToSelection) {
           for (const ed of editsArray) {
             if (ed.new_text) {
               const lines = String(ed.new_text).split("\n").filter(Boolean);
@@ -2419,11 +2402,17 @@ Return ONLY a valid JSON array of strings with the exact same length (${batchTex
 
           if (!newText && editType !== "delete") continue;
 
-          // Step A: Find matching paragraph by target_text or paragraph_index
+          // Special fast-path if single selection replacement
+          if (restrictToSelection && hasLiveSelection && editsArray.length === 1 && nonEmptyParas.length === 1 && !targetText) {
+            selection.insertText(newText, Word.InsertLocation.replace);
+            await context.sync();
+            appliedCount++;
+            continue;
+          }
+
           let matchedEntry = null;
 
           if (targetText.length > 0) {
-            // Try exact or substring match in nonEmptyParas
             matchedEntry = nonEmptyParas.find(item => item.text.includes(targetText)) ||
                            nonEmptyParas.find(item => targetText.includes(item.text)) ||
                            nonEmptyParas.find(item => item.text.toLowerCase().includes(targetText.toLowerCase()));
@@ -2446,9 +2435,10 @@ Return ONLY a valid JSON array of strings with the exact same length (${batchTex
             continue;
           }
 
-          // Step B: If targetText <= 240 chars, try global body.search()
+          // Search inside selection first if restrictToSelection, otherwise body
           if (targetText.length > 0 && targetText.length <= 240) {
-            const globalMatches = context.document.body.search(targetText, { matchCase: false, ignoreSpace: true });
+            const searchScope = (restrictToSelection && hasLiveSelection) ? selection : context.document.body;
+            const globalMatches = searchScope.search(targetText, { matchCase: false, ignoreSpace: true });
             globalMatches.load("items");
             await context.sync();
             if (globalMatches.items.length > 0) {
@@ -2465,8 +2455,7 @@ Return ONLY a valid JSON array of strings with the exact same length (${batchTex
             }
           }
 
-          // Step C: If editType is append/insert at end of document
-          if (editType === "append_end" || editType === "insert_after") {
+          if (!restrictToSelection && (editType === "append_end" || editType === "insert_after")) {
             context.document.body.insertParagraph(newText, Word.InsertLocation.end);
             await context.sync();
             appliedCount++;
@@ -2478,14 +2467,16 @@ Return ONLY a valid JSON array of strings with the exact same length (${batchTex
     }
 
     window.applySingleProposal = async function(batchId, editIndex, btnEl) {
-      const batch = pendingEditBatches[batchId];
+      const batchObj = pendingEditBatches[batchId];
+      const batch = batchObj && Array.isArray(batchObj.edits) ? batchObj.edits : batchObj;
+      const restrictSel = batchObj && batchObj.restrictToSelection ? true : false;
       if (!batch || !batch[editIndex]) return;
       if (btnEl) {
         btnEl.textContent = "⏳ Kiritilmoqda...";
         btnEl.disabled = true;
       }
       try {
-        const count = await executeSurgicalEditsInWord([batch[editIndex]]);
+        const count = await executeSurgicalEditsInWord([batch[editIndex]], restrictSel);
         if (count > 0 && btnEl) {
           btnEl.textContent = "✓ Joyiga kiritildi";
           btnEl.classList.add("applied");
@@ -2502,14 +2493,16 @@ Return ONLY a valid JSON array of strings with the exact same length (${batchTex
     };
 
     window.applyAllProposals = async function(batchId, btnEl) {
-      const batch = pendingEditBatches[batchId];
+      const batchObj = pendingEditBatches[batchId];
+      const batch = batchObj && Array.isArray(batchObj.edits) ? batchObj.edits : batchObj;
+      const restrictSel = batchObj && batchObj.restrictToSelection ? true : false;
       if (!batch || batch.length === 0) return;
       if (btnEl) {
         btnEl.textContent = "⏳ Barchasi kiritilmoqda...";
         btnEl.disabled = true;
       }
       try {
-        const count = await executeSurgicalEditsInWord(batch);
+        const count = await executeSurgicalEditsInWord(batch, restrictSel);
         if (btnEl) {
           btnEl.textContent = `✓ ${count} ta oʻzgarish joyiga kiritildi`;
           btnEl.style.background = "#15803d";
@@ -2522,14 +2515,14 @@ Return ONLY a valid JSON array of strings with the exact same length (${batchTex
       }
     };
 
-    function renderProposalCardsHtml(editsArray) {
+    function renderProposalCardsHtml(editsArray, restrictToSelection = false) {
       if (!Array.isArray(editsArray) || editsArray.length === 0) return "";
       const batchId = "batch_" + Date.now() + "_" + Math.random().toString(36).slice(2, 6);
-      pendingEditBatches[batchId] = editsArray;
+      pendingEditBatches[batchId] = { edits: editsArray, restrictToSelection: restrictToSelection };
 
       let cardsHtml = `<div class="proposals-wrap">`;
       editsArray.forEach(function(ed, idx) {
-        const pLabel = ed.paragraph_index ? `[P${ed.paragraph_index}]` : "Hujjat qismi";
+        const pLabel = ed.paragraph_index ? (restrictToSelection ? `[Tanlangan P${ed.paragraph_index}]` : `[P${ed.paragraph_index}]`) : "Tanlangan qism";
         const typeLabel = ed.type === "insert_after" ? "Qoʻshish" : (ed.type === "delete" ? "Oʻchirish" : "Almashtirish");
         const oldPart = ed.target_text ? `<div class="proposal-old">${escapeHtml(ed.target_text)}</div>` : "";
         const newPart = ed.new_text ? `<div class="proposal-new">➔ ${escapeHtml(ed.new_text)}</div>` : "";
@@ -2563,7 +2556,8 @@ Return ONLY a valid JSON array of strings with the exact same length (${batchTex
 
       appendUserMsg(userPrompt);
 
-      if (!isWordHost) {
+      const connected = await ensureWordConnected();
+      if (!connected) {
         appendBotMsg("⚠️ Haqiqiy Word hujjati bilan ishlash uchun plaginni Microsoft Word ichida oching.", "Word ulanmagan", true);
         return;
       }
@@ -2580,26 +2574,80 @@ Return ONLY a valid JSON array of strings with the exact same length (${batchTex
           }
 
           const selection = context.document.getSelection();
-          const allParas = context.document.body.paragraphs;
           selection.load("text");
-          allParas.load("items/text");
           await context.sync();
 
-          const selText = (selection.text || "").trim();
+          const liveSelText = (selection.text || "").trim();
+          const selText = forceWholeDocOverride ? "" : (liveSelText.length > 0 ? liveSelText : activeSelectionText);
           const useSelection = selText.length > 0;
           updateAutoScopeUI(selText);
 
-          // Build numbered paragraph map [P1], [P2], ... so Gemini can target exact paragraphs without touching the rest of the document!
-          const numberedParas = [];
-          for (let i = 0; i < allParas.items.length; i++) {
-            const t = (allParas.items[i].text || "").trim();
-            if (t.length > 0) {
-              numberedParas.push(`[P${numberedParas.length + 1}] ${t}`);
-            }
-          }
-          const numberedDocText = numberedParas.join("\n");
+          let numberedScopeText = "";
 
-          const sysPrompt = `You are Gemini Word AI working directly inside Microsoft Word (supporting Uzbek, Russian, English, and all languages).
+          if (useSelection) {
+            // STRICT SELECTION ISOLATION: NEVER load or send the rest of the document when text is highlighted!
+            const selParas = selection.paragraphs;
+            selParas.load("items/text");
+            await context.sync();
+
+            const selLines = [];
+            if (liveSelText.length > 0 && selParas.items.length > 1) {
+              for (let i = 0; i < selParas.items.length; i++) {
+                const t = (selParas.items[i].text || "").trim();
+                if (t.length > 0) {
+                  selLines.push(`[P${selLines.length + 1}] ${t}`);
+                }
+              }
+            } else {
+              // Single paragraph or partial phrase selection: split only selText by lines
+              const rawLines = selText.split(/\r?\n/).map(s => s.trim()).filter(Boolean);
+              for (let i = 0; i < rawLines.length; i++) {
+                selLines.push(`[P${i + 1}] ${rawLines[i]}`);
+              }
+            }
+            numberedScopeText = selLines.join("\n");
+          } else {
+            // No selection highlighted -> load Whole Document paragraphs
+            const allParas = context.document.body.paragraphs;
+            allParas.load("items/text");
+            await context.sync();
+
+            const numberedParas = [];
+            for (let i = 0; i < allParas.items.length; i++) {
+              const t = (allParas.items[i].text || "").trim();
+              if (t.length > 0) {
+                numberedParas.push(`[P${numberedParas.length + 1}] ${t}`);
+              }
+            }
+            numberedScopeText = numberedParas.join("\n");
+          }
+
+          const sysPrompt = useSelection
+            ? `You are Gemini Word AI working directly inside Microsoft Word.
+CRITICAL SCOPE LOCK — HIGHLIGHTED SELECTION ONLY:
+The user has highlighted ONLY a specific portion of their Word document. You are given ONLY the highlighted text below (numbered [P1], [P2], etc.).
+You MUST analyze, answer, propose edits, or modify ONLY this highlighted selection. Do NOT invent or refer to any other part of the document!
+
+Return ONLY a valid JSON object matching this exact structure:
+{
+  "action": "apply_surgical_edits" | "propose_edits" | "replace_selection" | "chat_reply",
+  "chat_message": "Your explanation, analysis, or confirmation message for the user in the chat pane",
+  "selection_replacement": "If replacing the entire highlighted selection directly, put the new text here",
+  "edits": [
+    {
+      "type": "replace" | "insert_after" | "delete",
+      "paragraph_index": 1,
+      "target_text": "Exact original phrase/sentence from [P1] (without [P1] prefix)",
+      "new_text": "The exact new replacement text for that specific spot (without [P1] prefix)"
+    }
+  ]
+}
+
+WHEN TO USE EACH ACTION FOR HIGHLIGHTED SELECTION:
+1. "propose_edits": When the user asks for suggestions, analysis, review, or recommendations ("taklif ber", "ko'rib chiq", "tahlil qil"). Explain in "chat_message" AND populate "edits" for ONLY the highlighted paragraphs.
+2. "apply_surgical_edits" or "replace_selection": When the user asks to rewrite, translate, fix, or apply changes ("shuni yoz", "o'zgartir", "tahrirla", "tarjima qil").
+3. "chat_reply": Pure Q&A about the highlighted selection.`
+            : `You are Gemini Word AI working directly inside Microsoft Word (supporting Uzbek, Russian, English, and all languages).
 CRITICAL RULE TO PRESERVE DOCUMENT FORMATTING:
 Never rewrite or return the entire document when only specific clauses, sentences, or paragraphs need to be changed!
 The document paragraphs are numbered [P1], [P2], [P3], etc.
@@ -2608,7 +2656,7 @@ Return ONLY a valid JSON object matching this exact structure:
 {
   "action": "apply_surgical_edits" | "propose_edits" | "replace_selection" | "chat_reply",
   "chat_message": "Your explanation, analysis, or confirmation message for the user in the chat pane",
-  "selection_replacement": "ONLY if Active Scope is Highlighted Selection and user wants to edit the selection, put the replacement text here",
+  "selection_replacement": "",
   "edits": [
     {
       "type": "replace" | "insert_after" | "delete",
@@ -2622,12 +2670,22 @@ Return ONLY a valid JSON object matching this exact structure:
 WHEN TO USE EACH ACTION:
 1. "propose_edits": When the user asks for suggestions, analysis, review, or recommendations ("taklif ber", "ko'rib chiq", "nimani o'zgartirish kerak"). Explain your suggestions in "chat_message" AND populate the "edits" array with the exact targeted changes so the user can click a button or say "shuni yoz" to apply them in-place!
 2. "apply_surgical_edits": When the user asks to apply previously suggested changes ("shuni yoz", "kirit", "qo'sh", "o'zgartir") OR asks to edit/add/change specific clauses or sections in the document. Populate "edits" with the exact targeted changes (paragraph_index, target_text, new_text).
-3. "replace_selection": When Active Scope is Highlighted Selection and the user wants to rewrite/translate/modify that highlighted selection.
-4. "chat_reply": Pure Q&A where no edits are proposed or applied.`;
+3. "chat_reply": Pure Q&A where no edits are proposed or applied.`;
 
           const fullInput = useSelection
-            ? `Active Scope: Highlighted Selection Only\nSelected Text:\n---\n${selText}\n---\nFull Document Context (Numbered Paragraphs):\n${numberedDocText}\n\nUser Request: ${userPrompt}`
-            : `Active Scope: Whole Document (Numbered Paragraphs)\n---\n${numberedDocText || '(Empty Document)'}\n---\n\nUser Request: ${userPrompt}`;
+            ? `Active Scope: ONLY Highlighted Selection (Do NOT touch anything outside this selection)
+Highlighted Text:
+---
+${numberedScopeText}
+---
+
+User Request: ${userPrompt}`
+            : `Active Scope: Whole Document (Numbered Paragraphs)
+---
+${numberedScopeText || "(Empty Document)"}
+---
+
+User Request: ${userPrompt}`;
 
           const res = await callGemini(fullInput, sysPrompt, true, true);
 
@@ -2650,23 +2708,34 @@ WHEN TO USE EACH ACTION:
           }
 
           // CASE 1: User highlighted a specific selection and wants it replaced directly
-          if (useSelection && (parsed.action === "replace_selection" || (parsed.action === "apply_surgical_edits" && parsed.selection_replacement))) {
+          if (useSelection && (parsed.action === "replace_selection" || (parsed.action === "apply_surgical_edits" && parsed.selection_replacement && (!parsed.edits || parsed.edits.length === 0)))) {
             const repText = parsed.selection_replacement || (parsed.edits && parsed.edits[0] && parsed.edits[0].new_text) || "";
             if (repText) {
-              selection.insertText(repText, Word.InsertLocation.replace);
-              await context.sync();
+              if (liveSelText.length > 0) {
+                selection.insertText(repText, Word.InsertLocation.replace);
+                await context.sync();
+              } else if (selText.length <= 240) {
+                const found = context.document.body.search(selText, { matchCase: false, ignoreSpace: true });
+                found.load("items");
+                await context.sync();
+                if (found.items.length > 0) {
+                  found.items[0].insertText(repText, Word.InsertLocation.replace);
+                  await context.sync();
+                }
+              }
               const msgHtml = `${formatMarkdownToHtml(parsed.chat_message || "✅ Belgilangan joy yangilandi.")}<div class="status-badge">✓ Faqat belgilangan joy oʻzgartirildi</div>${formatFallbackNotice(res)}`;
               replaceLoadingMsg(loadId, msgHtml, getMetaWithSkill(res.modelUsed), false, parsed.chat_message || repText);
               return;
             }
           }
 
-          // CASE 2: Apply Surgical Edits directly to specific paragraphs/phrases in the document!
+          // CASE 2: Apply Surgical Edits (strictly inside selection if useSelection is true!)
           if (parsed.action === "apply_surgical_edits" && Array.isArray(parsed.edits) && parsed.edits.length > 0) {
-            const appliedCount = await executeSurgicalEditsInWord(parsed.edits);
+            const appliedCount = await executeSurgicalEditsInWord(parsed.edits, useSelection);
+            const scopeTag = useSelection ? "belgilangan qismdagi " : "";
             const badgeHtml = appliedCount > 0
-              ? `<div class="status-badge">✓ Faqat ${appliedCount} ta joy formatni buzmasdan yangilandi</div>`
-              : renderProposalCardsHtml(parsed.edits);
+              ? `<div class="status-badge">✓ Faqat ${scopeTag}${appliedCount} ta joy formatni buzmasdan yangilandi</div>`
+              : renderProposalCardsHtml(parsed.edits, useSelection);
             const msgHtml = `${formatMarkdownToHtml(parsed.chat_message || "✅ Oʻzgarishlar tegishli joylarga kiritildi.")}${badgeHtml}${formatFallbackNotice(res)}`;
             replaceLoadingMsg(
               loadId,
@@ -2678,9 +2747,9 @@ WHEN TO USE EACH ACTION:
             return;
           }
 
-          // CASE 3: Propose Edits (shows interactive 1-click Apply cards for each proposed change + saves them in history so saying "shuni yoz" applies them!)
+          // CASE 3: Propose Edits (scoped to selection if useSelection is true!)
           if (Array.isArray(parsed.edits) && parsed.edits.length > 0) {
-            const cardsHtml = renderProposalCardsHtml(parsed.edits);
+            const cardsHtml = renderProposalCardsHtml(parsed.edits, useSelection);
             const msgHtml = `${formatMarkdownToHtml(parsed.chat_message || "Quyidagi oʻzgarishlarni taklif qilaman:")}${cardsHtml}${formatFallbackNotice(res)}`;
             replaceLoadingMsg(
               loadId,
@@ -2823,11 +2892,25 @@ WHEN TO USE EACH ACTION:
       persistChatHistory();
     }
 
-    window.clearChatWithConfirm = function() {
-      if (chatHistory.length > 0) {
-        if (!confirm("Ushbu fayl boʻyicha saqlangan barcha chat yozishmalarini oʻchirib tozalamoqchimisiz?")) {
-          return;
-        }
+    var clearConfirmTimer = null;
+    window.clearChatWithConfirm = function(btnEl) {
+      var btn = btnEl || document.getElementById("clearChatBtn");
+      if (chatHistory.length > 0 && btn && !btn.dataset.confirming) {
+        btn.dataset.confirming = "1";
+        btn.textContent = "❓";
+        btn.title = "Tasdiqlash uchun yana bir marta bosing";
+        if (clearConfirmTimer) clearTimeout(clearConfirmTimer);
+        clearConfirmTimer = setTimeout(function() {
+          delete btn.dataset.confirming;
+          btn.textContent = "🗑️";
+          btn.title = "Ushbu fayl boʻyicha chat tarixini tozalash";
+        }, 3000);
+        return;
+      }
+      if (btn) {
+        delete btn.dataset.confirming;
+        btn.textContent = "🗑️";
+        btn.title = "Ushbu fayl boʻyicha chat tarixini tozalash";
       }
       chatHistory = [];
       safeStorage.remove("word_ai_chat_" + currentDocId);
