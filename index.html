@@ -1864,120 +1864,214 @@
     // =========================================================================
     // 3. GEMINI API CLIENT (RESPECTS SELECTED MODEL + MULTI-TURN CONVERSATION)
     // =========================================================================
-    // Bulletproof JSON parser & truncated-JSON recovery engine (Never leaks raw JSON to chat UI!)
+    // Bulletproof O(N) JSON parser & truncated-JSON recovery engine + OOXML full document extractor
+    function sanitizeJsonStringLiterals(str) {
+      var out = [];
+      var inStr = false;
+      var esc = false;
+      for (var i = 0; i < str.length; i++) {
+        var c = str[i];
+        if (esc) {
+          out.push(c);
+          esc = false;
+          continue;
+        }
+        if (c === "\\") {
+          out.push(c);
+          esc = true;
+          continue;
+        }
+        if (c === '"') {
+          inStr = !inStr;
+          out.push(c);
+          continue;
+        }
+        if (inStr) {
+          if (c === "\n") { out.push("\\n"); continue; }
+          if (c === "\r") { continue; }
+          if (c === "\t") { out.push("\\t"); continue; }
+        }
+        out.push(c);
+      }
+      return out.join("");
+    }
+
+    function extractLinearJsonStringField(src, keyName) {
+      var keyPattern = new RegExp('"' + keyName + '"\\s*:\\s*"');
+      var m = keyPattern.exec(src);
+      if (!m) return "";
+      var startIdx = m.index + m[0].length;
+      var chars = [];
+      var esc = false;
+      for (var i = startIdx; i < src.length; i++) {
+        var ch = src[i];
+        if (esc) {
+          if (ch === "n") chars.push("\n");
+          else if (ch === "t") chars.push("\t");
+          else if (ch === "r") {}
+          else chars.push(ch);
+          esc = false;
+          continue;
+        }
+        if (ch === "\\") {
+          esc = true;
+          continue;
+        }
+        if (ch === '"') {
+          break;
+        }
+        chars.push(ch);
+      }
+      return chars.join("");
+    }
+
     function parseOrRepairGeminiJson(rawText) {
       if (!rawText || typeof rawText !== "string") return null;
       var trimmed = rawText.trim();
 
-      // Strip markdown code fences if present
       var fenceMatch = trimmed.match(/```(?:json)?\s*([\s\S]*?)```/i);
       var candidate = fenceMatch ? fenceMatch[1].trim() : trimmed.replace(/^```(?:json)?\s*/i, "").replace(/```\s*$/i, "").trim();
 
-      // 1. Try direct JSON.parse
+      // 1. Direct JSON.parse
       try {
         var direct = JSON.parse(candidate);
         if (direct && typeof direct === "object") return direct;
       } catch (e) {}
 
-      // 2. Try extracting from first '{' to last '}'
+      // 2. Sanitized JSON.parse (fixes unescaped newlines/tabs inside JSON strings)
+      try {
+        var san = sanitizeJsonStringLiterals(candidate);
+        var directSan = JSON.parse(san);
+        if (directSan && typeof directSan === "object") return directSan;
+      } catch (e) {}
+
+      // 3. Substring from first '{' to last '}'
       var firstBrace = candidate.indexOf("{");
       var lastBrace = candidate.lastIndexOf("}");
       if (firstBrace !== -1 && lastBrace > firstBrace) {
+        var subStr = candidate.slice(firstBrace, lastBrace + 1);
         try {
-          var sub = JSON.parse(candidate.slice(firstBrace, lastBrace + 1));
+          var sub = JSON.parse(subStr);
           if (sub && typeof sub === "object") return sub;
+        } catch (e) {}
+        try {
+          var subSan = JSON.parse(sanitizeJsonStringLiterals(subStr));
+          if (subSan && typeof subSan === "object") return subSan;
         } catch (e) {}
       }
 
-      // 3. Recovery for truncated or malformed JSON containing "action", "chat_message", or "edits"
+      // 4. Linear O(N) recovery for truncated JSON responses
       if (candidate.indexOf('"action"') === -1 && candidate.indexOf('"chat_message"') === -1 && candidate.indexOf('"edits"') === -1) {
         return null;
       }
 
       var result = {
-        action: "chat_reply",
-        chat_message: "",
-        selection_replacement: "",
+        action: extractLinearJsonStringField(candidate, "action") || "chat_reply",
+        chat_message: extractLinearJsonStringField(candidate, "chat_message"),
+        selection_replacement: extractLinearJsonStringField(candidate, "selection_replacement"),
         edits: []
       };
 
-      var actMatch = candidate.match(/"action"\s*:\s*"([^"]+)"/);
-      if (actMatch) result.action = actMatch[1];
+      var editsKeyMatch = /"edits"\s*:\s*\[/.exec(candidate);
+      if (editsKeyMatch) {
+        var arrayStart = editsKeyMatch.index + editsKeyMatch[0].length;
+        var arrayBody = sanitizeJsonStringLiterals(candidate.slice(arrayStart));
+        var depth = 0;
+        var objStart = -1;
+        var inString = false;
+        var escaped = false;
 
-      // Extract "chat_message" value safely even if multiline or escaped
-      var chatMsgMatch = candidate.match(/"chat_message"\s*:\s*"((?:[^"\\]|\\.)*)"/);
-      if (chatMsgMatch) {
-        try {
-          result.chat_message = JSON.parse('"' + chatMsgMatch[1] + '"');
-        } catch (e) {
-          result.chat_message = chatMsgMatch[1].replace(/\\n/g, "\n").replace(/\\"/g, '"');
-        }
-      } else {
-        // What if chat_message itself was truncated before closing quote?
-        var openChatIdx = candidate.indexOf('"chat_message"');
-        if (openChatIdx !== -1) {
-          var colonIdx = candidate.indexOf(":", openChatIdx);
-          var firstQuote = colonIdx !== -1 ? candidate.indexOf('"', colonIdx + 1) : -1;
-          if (firstQuote !== -1) {
-            var rest = candidate.slice(firstQuote + 1);
-            var endMarker = rest.search(/",\s*"(?:edits|selection_replacement)"/);
-            var rawMsg = endMarker !== -1 ? rest.slice(0, endMarker) : rest.replace(/["}\]]+$/, "");
-            result.chat_message = rawMsg.replace(/\\n/g, "\n").replace(/\\"/g, '"');
-          }
-        }
-      }
-
-      // Extract all complete edit objects inside "edits": [ ... ]
-      var editsKeyIdx = candidate.indexOf('"edits"');
-      if (editsKeyIdx !== -1) {
-        var bracketStart = candidate.indexOf("[", editsKeyIdx);
-        if (bracketStart !== -1) {
-          var arrayBody = candidate.slice(bracketStart + 1);
-          var depth = 0;
-          var objStart = -1;
-          var inString = false;
-          var escaped = false;
-
-          for (var i = 0; i < arrayBody.length; i++) {
-            var ch = arrayBody[i];
-            if (escaped) {
-              escaped = false;
-              continue;
-            }
-            if (ch === "\\") {
-              escaped = true;
-              continue;
-            }
-            if (ch === '"') {
-              inString = !inString;
-              continue;
-            }
-            if (!inString) {
-              if (ch === "{") {
-                if (depth === 0) objStart = i;
-                depth++;
-              } else if (ch === "}") {
-                depth--;
-                if (depth === 0 && objStart !== -1) {
-                  var objStr = arrayBody.slice(objStart, i + 1);
-                  try {
-                    var edObj = JSON.parse(objStr);
-                    if (edObj && (edObj.target_text || edObj.new_text || edObj.paragraph_index)) {
-                      result.edits.push(edObj);
-                    }
-                  } catch (e) {}
-                  objStart = -1;
-                }
+        for (var i = 0; i < arrayBody.length; i++) {
+          var ch = arrayBody[i];
+          if (escaped) { escaped = false; continue; }
+          if (ch === "\\") { escaped = true; continue; }
+          if (ch === '"') { inString = !inString; continue; }
+          if (!inString) {
+            if (ch === "{") {
+              if (depth === 0) objStart = i;
+              depth++;
+            } else if (ch === "}") {
+              depth--;
+              if (depth === 0 && objStart !== -1) {
+                var objStr = arrayBody.slice(objStart, i + 1);
+                try {
+                  var edObj = JSON.parse(objStr);
+                  if (edObj && (edObj.target_text || edObj.new_text || edObj.paragraph_index)) {
+                    result.edits.push(edObj);
+                  }
+                } catch (e) {}
+                objStart = -1;
               }
+            } else if (ch === "]" && depth === 0) {
+              break;
             }
           }
         }
       }
 
-      if (result.chat_message || result.edits.length > 0) {
+      if (result.chat_message || result.edits.length > 0 || result.selection_replacement) {
         return result;
       }
       return null;
+    }
+
+    // Extract hidden TextBoxes, Shapes, SmartArt diagrams, Headers, Footnotes from Word OOXML
+    // so that diagrams/boxes (like AAOIFI Hierarchy [P60], Qualitative Characteristics, Measurement, etc.) are never missed!
+    function enrichParagraphsWithOoxml(numberedParas, plainParaTexts, ooxmlStr) {
+      if (!ooxmlStr || typeof DOMParser === "undefined") return numberedParas.join("\n");
+      try {
+        // Remove <mc:Fallback> blocks first so <mc:AlternateContent> doesn't duplicate every textbox!
+        var cleanedXml = ooxmlStr.replace(/<mc:Fallback>[\s\S]*?<\/mc:Fallback>/gi, "");
+        var parser = new DOMParser();
+        var xmlDoc = parser.parseFromString(cleanedXml, "application/xml");
+
+        var fullJoinedPlain = plainParaTexts.join(" ").toLowerCase();
+        var extraBlocks = [];
+        var seenSnippet = {};
+
+        // 1. Check all <w:txbxContent> (TextBoxes / Shapes / Callouts / Frames)
+        var txbxNodes = xmlDoc.getElementsByTagName("w:txbxContent");
+        for (var i = 0; i < txbxNodes.length; i++) {
+          var box = txbxNodes[i];
+          var pNodes = box.getElementsByTagName("w:p");
+          var boxLines = [];
+          for (var j = 0; j < pNodes.length; j++) {
+            var tNodes = pNodes[j].getElementsByTagName("w:t");
+            var lineParts = [];
+            for (var k = 0; k < tNodes.length; k++) {
+              if (tNodes[k].textContent) lineParts.push(tNodes[k].textContent);
+            }
+            var ln = lineParts.join("").trim();
+            if (ln) boxLines.push(ln);
+          }
+          var boxText = boxLines.join(" | ").trim();
+          if (boxText.length > 2 && !seenSnippet[boxText]) {
+            seenSnippet[boxText] = true;
+            if (fullJoinedPlain.indexOf(boxText.toLowerCase().slice(0, 40)) === -1) {
+              extraBlocks.push("[Sxema / TextBox]: " + boxText);
+            }
+          }
+        }
+
+        // 2. Check SmartArt / DrawingML diagram text (<a:t> or <dgm:t>) not inside w:txbxContent
+        var aTextNodes = xmlDoc.getElementsByTagName("a:t");
+        var diagParts = [];
+        for (var d = 0; d < aTextNodes.length; d++) {
+          var dt = (aTextNodes[d].textContent || "").trim();
+          if (dt.length > 1 && !seenSnippet[dt] && fullJoinedPlain.indexOf(dt.toLowerCase()) === -1) {
+            seenSnippet[dt] = true;
+            diagParts.push(dt);
+          }
+        }
+        if (diagParts.length > 0) {
+          extraBlocks.push("[Diagramma / SmartArt matni]: " + diagParts.join(" • "));
+        }
+
+        if (extraBlocks.length > 0) {
+          return numberedParas.join("\n") + "\n\n--- HUJJATDAGI SXEMALAR, TEXTBOX VA JADVAL BLOKLARI ---\n" + extraBlocks.join("\n");
+        }
+      } catch (e) {}
+      return numberedParas.join("\n");
     }
 
     async function callGemini(promptText, systemInstruction, includeConversationHistory = false, expectJson = false) {
@@ -2607,19 +2701,26 @@ Return ONLY a valid JSON array of strings of the exact same length (${batchTexts
             }
             numberedScopeText = selLines.join("\n");
           } else {
-            // No selection highlighted -> load Whole Document paragraphs
+            // No selection highlighted -> load Whole Document paragraphs + OOXML (for TextBoxes/Shapes/Diagrams)
             const allParas = context.document.body.paragraphs;
             allParas.load("items/text");
+            let bodyOoxml = null;
+            try {
+              bodyOoxml = context.document.body.getOoxml();
+            } catch (e) {}
             await context.sync();
 
             const numberedParas = [];
+            const plainParaTexts = [];
             for (let i = 0; i < allParas.items.length; i++) {
-              const t = (allParas.items[i].text || "").trim();
+              const t = (allParas.items[i].text || "").replace(/[\u000b\v\r]+/g, " ").trim();
               if (t.length > 0) {
                 numberedParas.push(`[P${numberedParas.length + 1}] ${t}`);
+                plainParaTexts.push(t);
               }
             }
-            numberedScopeText = numberedParas.join("\n");
+            const rawOoxml = (bodyOoxml && bodyOoxml.value) ? bodyOoxml.value : "";
+            numberedScopeText = enrichParagraphsWithOoxml(numberedParas, plainParaTexts, rawOoxml);
           }
 
           const sysPrompt = useSelection
@@ -2668,9 +2769,9 @@ Return ONLY a valid JSON object matching this exact structure:
 }
 
 WHEN TO USE EACH ACTION:
-1. "propose_edits": When the user asks for suggestions, analysis, review, or recommendations ("taklif ber", "ko'rib chiq", "nimani o'zgartirish kerak"). Explain your suggestions in "chat_message" AND populate the "edits" array with the exact targeted changes so the user can click a button or say "shuni yoz" to apply them in-place!
-2. "apply_surgical_edits": When the user asks to apply previously suggested changes ("shuni yoz", "kirit", "qo'sh", "o'zgartir") OR asks to edit/add/change specific clauses or sections in the document. Populate "edits" with the exact targeted changes (paragraph_index, target_text, new_text).
-3. "chat_reply": Pure Q&A where no edits are proposed or applied.`;
+1. "propose_edits": Whenever the user asks for review, gap analysis, checking for missing/incomplete sections, suggestions, or recommendations ("kamchiliklar yo'qmi", "tekshir", "taklif ber", "ko'rib chiq", "tahlil qil"). Explain your findings clearly in "chat_message" AND ALWAYS populate the "edits" array with concrete ready-to-insert completions/fixes for incomplete paragraphs (e.g. [P1], [P60], [P171], [P191]) so the user immediately gets "✍️ Shu joyga kiritish" buttons!
+2. "apply_surgical_edits": When the user asks to apply previously suggested changes ("shuni yoz", "to'ldirib ber", "kirit", "qo'sh", "o'zgartir") OR asks to directly edit/complete specific clauses or sections in the document. Populate "edits" with the exact targeted changes (paragraph_index, target_text, new_text).
+3. "chat_reply": ONLY for general questions where no document paragraph needs completion or editing.`;
 
           const fullInput = useSelection
             ? `Active Scope: ONLY Highlighted Selection (Do NOT touch anything outside this selection)
@@ -2936,11 +3037,56 @@ User Request: ${userPrompt}`;
         .replace(/"/g, "&quot;");
     }
 
-    function formatMarkdownToHtml(md) {
-      return escapeHtml(md)
+    function formatInlineMd(escapedLine) {
+      return escapedLine
         .replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>")
-        .replace(/\*(.+?)\*/g, "<em>$1</em>")
-        .replace(/\n/g, "<br/>");
+        .replace(/(^|[^*])\*([^*\n]+)\*(?!\*)/g, "$1<em>$2</em>")
+        .replace(/`([^`\n]+)`/g, '<code style="background:#e2e8f0;padding:1px 4px;border-radius:3px;font-size:11px;">$1</code>');
+    }
+
+    function formatMarkdownToHtml(md) {
+      if (!md) return "";
+      var normalized = String(md)
+        .replace(/\r\n/g, "\n")
+        // Remove empty stranded bullet lines right before another bullet
+        .replace(/(^|\n)\s*[-*•]\s*\n+(?=\s*[-*•]\s)/g, "$1")
+        // Join stranded bullet line ("- \nText") with the following text line
+        .replace(/(^|\n)\s*([-*•])\s*\n+\s*(?=\S)/g, "$1$2 ");
+
+      var lines = normalized.split("\n");
+      var out = [];
+
+      for (var i = 0; i < lines.length; i++) {
+        var trimmed = lines[i].trim();
+        if (!trimmed) {
+          if (out.length > 0 && out[out.length - 1] !== '<div style="height:5px;"></div>') {
+            out.push('<div style="height:5px;"></div>');
+          }
+          continue;
+        }
+
+        var hMatch = trimmed.match(/^(#{1,4})\s+(.+)$/);
+        if (hMatch) {
+          out.push('<div style="font-weight:700;font-size:12.5px;color:#0f172a;margin:7px 0 2px;">' + formatInlineMd(escapeHtml(hMatch[2])) + '</div>');
+          continue;
+        }
+
+        var bMatch = trimmed.match(/^[-*•]\s+(.+)$/);
+        if (bMatch) {
+          out.push('<div style="display:flex;align-items:flex-start;gap:5px;margin:2px 0 2px 2px;"><span style="color:#2563eb;font-weight:700;line-height:1.4;">•</span><span style="flex:1;">' + formatInlineMd(escapeHtml(bMatch[1])) + '</span></div>');
+          continue;
+        }
+
+        var nMatch = trimmed.match(/^(\d+[\.\)])\s+(.+)$/);
+        if (nMatch) {
+          out.push('<div style="display:flex;align-items:flex-start;gap:5px;margin:2px 0 2px 2px;"><span style="color:#2563eb;font-weight:700;min-width:16px;">' + escapeHtml(nMatch[1]) + '</span><span style="flex:1;">' + formatInlineMd(escapeHtml(nMatch[2])) + '</span></div>');
+          continue;
+        }
+
+        out.push('<div>' + formatInlineMd(escapeHtml(trimmed)) + '</div>');
+      }
+
+      return out.join("");
     }
   </script>
 </body>
